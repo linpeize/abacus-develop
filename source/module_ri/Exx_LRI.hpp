@@ -12,7 +12,6 @@
 #include "module_ri/exx_abfs-construct_orbs.h"
 #include "module_ri/exx_abfs-io.h"
 #include "module_ri/conv_coulomb_pot_k.h"
-#include "module_ri/conv_coulomb_pot_k-template.h"
 #include "module_base/tool_title.h"
 #include "module_base/timer.h"
 #include "module_ri/serialization_cereal.h"
