@@ -13,12 +13,11 @@ namespace Conv_Coulomb_Pot_K
 		const std::vector<T> & orbs,
 		const Ccp_Type &ccp_type,
 		const std::map<std::string,double> &parameter,
-		const double rmesh_times,
-		const int& nks)
+		const double rmesh_times)
 	{
 		std::vector<T> orbs_ccp(orbs.size());
 		for( size_t i=0; i!=orbs.size(); ++i )
-			orbs_ccp[i] = cal_orbs_ccp(orbs[i], ccp_type, parameter, rmesh_times, nks );
+			orbs_ccp[i] = cal_orbs_ccp(orbs[i], ccp_type, parameter, rmesh_times);
 		return orbs_ccp;
 	}
 
