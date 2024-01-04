@@ -18,16 +18,13 @@ namespace Conv_Coulomb_Pot_K
 	// rongshi add 2022-07-27
 	// Sphere truction -- Spencer
 	std::vector<double> cal_psi_hf(
-		const int& nks,
 		const std::vector<double> &psif,
 		const std::vector<double> &k_radial,
-		const double omega = 0)
+		const double hf_Rcut)
 	{
-		const int nspin0 = (GlobalV::NSPIN==2) ? 2 : 1;
-		const double Rc = std::pow(0.75 * nks/nspin0 * GlobalC::ucell.omega / (ModuleBase::PI), 1.0/3.0);
 		std::vector<double> psik2_ccp(psif.size());
 		for (size_t ik = 0; ik < psif.size(); ++ik)
-			psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1 - std::cos(k_radial[ik] * Rc));
+			psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1 - std::cos(k_radial[ik] * hf_Rcut));
 		return psik2_ccp;
 	}
 
@@ -35,11 +32,11 @@ namespace Conv_Coulomb_Pot_K
 	std::vector<double> cal_psi_hse(
 		const std::vector<double> & psif,
 		const std::vector<double> & k_radial,
-		const double omega)
+		const double hse_omega)
 	{
 		std::vector<double> psik2_ccp(psif.size());
 		for( size_t ik=0; ik<psif.size(); ++ik )
-			psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1-std::exp(-(k_radial[ik]*k_radial[ik])/(4*omega*omega)));
+			psik2_ccp[ik] = ModuleBase::FOUR_PI * psif[ik] * (1-std::exp(-(k_radial[ik]*k_radial[ik])/(4*hse_omega*hse_omega)));
 		return psik2_ccp;
 	}
 
@@ -50,8 +47,7 @@ namespace Conv_Coulomb_Pot_K
 		const Numerical_Orbital_Lm &orbs,
 		const Ccp_Type &ccp_type,
 		const std::map<std::string,double> &parameter,
-		const double rmesh_times,
-		const int& nks)
+		const double rmesh_times)
 	{
 		std::vector<double> psik2_ccp;
 		switch(ccp_type)
@@ -59,7 +55,7 @@ namespace Conv_Coulomb_Pot_K
 			case Ccp_Type::Ccp:
 				psik2_ccp = cal_psi_ccp( orbs.get_psif() );		break;
 			case Ccp_Type::Hf:
-				psik2_ccp = cal_psi_hf(nks, orbs.get_psif(), orbs.get_k_radial());      break;
+				psik2_ccp = cal_psi_hf( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hf_Rcut"));      break;
 			case Ccp_Type::Hse:
 				psik2_ccp = cal_psi_hse( orbs.get_psif(), orbs.get_k_radial(), parameter.at("hse_omega") );		break;
 			default:
