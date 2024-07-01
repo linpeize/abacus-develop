@@ -27,6 +27,7 @@
 #include "module_io/dm_io.h"
 #include "module_io/rho_io.h"
 #include "module_io/write_pot.h"
+#include "module_io/write_wfc_nao.h"
 
 namespace ModuleESolver
 {
@@ -751,6 +752,17 @@ void ESolver_KS_LCAO<TK, TR>::nscf(void)
         elecstate::cal_dm_psi(&(this->orb_con.ParaV), pelec_lcao->wg, *(this->psi), *(pelec_lcao->get_DM()));
         this->cal_mag(istep, true);
     }
+
+    if (INPUT.out_wfc_lcao)
+    {
+        ModuleIO::write_wfc_nao(INPUT.out_wfc_lcao,
+                                *this->psi,
+                                this->pelec->ekb,
+                                this->pelec->wg,
+                                this->pelec->klist->kvec_c,
+                                this->orb_con.ParaV,
+                                istep);
+    }    
 
     return;
 }
