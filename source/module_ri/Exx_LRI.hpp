@@ -140,6 +140,11 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 				{{"writable_dVws",true}});
 		this->cv.dVws = LRI_CV_Tools::get_dCVws(dVs);
 		this->exx_lri.set_dVs(std::move(dVs), this->info.V_grad_threshold);
+		if(GlobalV::CAL_STRESS)
+		{
+			std::array<std::array<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>,3>,3> dVRs = LRI_CV_Tools::cal_dMRs(dVs);
+			this->exx_lri.set_dVRs(std::move(dVRs), this->info.V_grad_threshold);
+		}
 	}
 
 	const std::array<Tcell,Ndim> period_Cs = LRI_CV_Tools::cal_latvec_range<Tcell>(2);
@@ -160,6 +165,11 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 		std::array<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>,3> &dCs = std::get<1>(Cs_dCs);
 		this->cv.dCws = LRI_CV_Tools::get_dCVws(dCs);
 		this->exx_lri.set_dCs(std::move(dCs), this->info.C_grad_threshold);
+		if(GlobalV::CAL_STRESS)
+		{
+			std::array<std::array<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>,3>,3> dCRs = LRI_CV_Tools::cal_dMRs(dCs);
+			this->exx_lri.set_dCRs(std::move(dCRs), this->info.C_grad_threshold);
+		}
 	}
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
 }
