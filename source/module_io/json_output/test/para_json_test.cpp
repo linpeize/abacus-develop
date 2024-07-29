@@ -5,10 +5,10 @@
 #include "../general_info.h"
 #include "../init_info.h"
 #include "../readin_info.h"
-#include "module_io/input.h"
+#include "module_parameter/parameter.h"
 #include "module_io/para_json.h"
 #include "version.h"
-
+#undef private
 /************************************************
  *  unit test of json output module
  ************************************************
@@ -209,16 +209,16 @@ TEST(AbacusJsonTest, GeneralInfo)
     std::time_t time_now = std::time(nullptr);
     std::string start_time_str;
     Json::convert_time(time_now, start_time_str);
-    INPUT.start_time = time_now;
+    PARAM.sys.start_time = time_now;
 
-    INPUT.device = "cpu";
-    INPUT.pseudo_dir = "./abacus/test/pseudo_dir";
-    INPUT.orbital_dir = "./abacus/test/orbital_dir";
-    INPUT.stru_file = "./abacus/test/stru_file";
-    INPUT.kpoint_file = "./abacus/test/kpoint_file";
+    PARAM.input.device = "cpu";
+    PARAM.input.pseudo_dir = "./abacus/test/pseudo_dir";
+    PARAM.input.orbital_dir = "./abacus/test/orbital_dir";
+    PARAM.input.stru_file = "./abacus/test/stru_file";
+    PARAM.input.kpoint_file = "./abacus/test/kpoint_file";
     // output the json file
     Json::AbacusJson::doc.Parse("{}");
-    Json::gen_general_info(&INPUT);
+    Json::gen_general_info(PARAM);
     Json::json_output();
 
     std::string filename = "abacus.json";
@@ -304,9 +304,9 @@ TEST(AbacusJsonTest, InitInfo)
     ASSERT_STREQ(Json::AbacusJson::doc["init"]["point_group"].GetString(), "T_d");
     ASSERT_STREQ(Json::AbacusJson::doc["init"]["point_group_in_space"].GetString(), "O_h");
 
-    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["Si"].GetInt(), 3);
-    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["C"].GetInt(), 4);
-    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["O"].GetInt(), 5);
+    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["Si"].GetDouble(), 3);
+    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["C"].GetDouble(), 4);
+    ASSERT_EQ(Json::AbacusJson::doc["init"]["nelectron_each_type"]["O"].GetDouble(), 5);
 
     ASSERT_EQ(Json::AbacusJson::doc["init"]["natom_each_type"]["Si"].GetInt(), 1);
     ASSERT_EQ(Json::AbacusJson::doc["init"]["natom_each_type"]["C"].GetInt(), 2);

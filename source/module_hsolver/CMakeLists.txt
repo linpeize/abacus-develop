@@ -16,6 +16,7 @@ if(ENABLE_LCAO)
     list(APPEND objects
         hsolver_lcao.cpp
         diago_scalapack.cpp
+        parallel_k2d.cpp
     )
   else ()
     list(APPEND objects
@@ -79,6 +80,8 @@ endif()
 
 IF (BUILD_TESTING)
   add_subdirectory(test)
-  add_subdirectory(kernels/test)
+  if(ENABLE_MPI)
+    add_subdirectory(kernels/test)
+  endif()
   message(STATUS "Building tests")
 endif()

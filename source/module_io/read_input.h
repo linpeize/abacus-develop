@@ -1,10 +1,10 @@
 #ifndef READ_INPUT_H
 #define READ_INPUT_H
-#include <sstream>
-#include <string>
 
 #include "input_item.h"
 #include "module_parameter/parameter.h"
+
+#include <string>
 
 namespace ModuleIO
 {
@@ -76,21 +76,39 @@ class ReadInput
      * @param item input_item
      */
     void add_item(const Input_Item& item);
-    // general items
-    void item_general();
-    // items for pw
-    void item_pw();
-    // items for sdft
-    void item_sdft();
-    // items for relax
-    void item_relax();
+    // add bcast functions for global values
+    void set_globalv_bcast();
+    // system items
+    void item_system();
+    // items for electronic structure
+    void item_elec_stru();
     // items for lcao
     void item_lcao();
-    // items for postprocess
-    void item_postprocess();
+    // items for relax
+    void item_relax();
     // items for md
     void item_md();
-    // items for others
+    // items for ofdft
+    void item_ofdft();
+    // items for sdft
+    void item_sdft();
+    // items for deepks
+    void item_deepks();
+    // items for real time tddft
+    void item_rt_tddft();
+    // items for linear response tddft
+    void item_lr_tddft();
+    // items for output
+    void item_output();
+    // items for postprocess
+    void item_postprocess();
+    // items for some models
+    void item_model();
+    // items for exx
+    void item_exx();
+    // items for dft+u
+    void item_dftu();
+    // items for other
     void item_others();
 
   private:
@@ -115,11 +133,13 @@ class ReadInput
 // convert string to lower case
 void strtolower(char* sa, char* sb);
 // convert string vector to a long string
-std::string longstring(const std::vector<std::string>& str_values, const int length);
+std::string longstring(const std::vector<std::string>& str_values);
 // convert string to bool
 bool convert_bool(std::string str);
 // if find a string in a vector of strings
 bool find_str(const std::vector<std::string>& strings, const std::string& strToFind);
+// convert to directory format
+std::string to_dir(const std::string& str);
 
 } // namespace ModuleIO
 
