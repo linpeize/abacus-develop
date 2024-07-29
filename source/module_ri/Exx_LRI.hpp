@@ -143,7 +143,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 		if(GlobalV::CAL_STRESS)
 		{
 			std::array<std::array<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>,3>,3> dVRs = LRI_CV_Tools::cal_dMRs(dVs);
-			this->exx_lri.set_dVRs(std::move(dVRs), this->info.V_grad_threshold);
+			this->exx_lri.set_dVRs(std::move(dVRs), this->info.V_grad_R_threshold);
 		}
 	}
 
@@ -168,7 +168,7 @@ void Exx_LRI<Tdata>::cal_exx_ions()
 		if(GlobalV::CAL_STRESS)
 		{
 			std::array<std::array<std::map<TA,std::map<TAC,RI::Tensor<Tdata>>>,3>,3> dCRs = LRI_CV_Tools::cal_dMRs(dCs);
-			this->exx_lri.set_dCRs(std::move(dCRs), this->info.C_grad_threshold);
+			this->exx_lri.set_dCRs(std::move(dCRs), this->info.C_grad_R_threshold);
 		}
 	}
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_ions");
