@@ -182,8 +182,6 @@ void Exx_LRI<Tdata>::cal_exx_elec(const std::vector<std::map<TA,std::map<TAC,RI:
 
 	const std::vector<std::tuple<std::set<TA>, std::set<TA>>> judge = RI_2D_Comm::get_2D_judge(pv);
 
-	this->exx_lri.set_csm_threshold(this->info.cauchy_threshold);
-
 	this->Hexxs.resize(GlobalV::NSPIN);
 	this->Eexx = 0;
 	for(int is=0; is<GlobalV::NSPIN; ++is)
@@ -249,8 +247,6 @@ void Exx_LRI<Tdata>::cal_exx_force()
 {
 	ModuleBase::TITLE("Exx_LRI","cal_exx_force");
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_force");
-		
-	this->exx_lri.set_csm_threshold(this->info.cauchy_force_threshold);
 
 	this->force_exx.create(GlobalC::ucell.nat, Ndim);
 	for(int is=0; is<GlobalV::NSPIN; ++is)
@@ -273,8 +269,6 @@ void Exx_LRI<Tdata>::cal_exx_stress()
 {
 	ModuleBase::TITLE("Exx_LRI","cal_exx_stress");
 	ModuleBase::timer::tick("Exx_LRI", "cal_exx_stress");
-		
-	this->exx_lri.set_csm_threshold(this->info.cauchy_stress_threshold);
 
 	this->stress_exx.create(Ndim, Ndim);
 	for(int is=0; is<GlobalV::NSPIN; ++is)
