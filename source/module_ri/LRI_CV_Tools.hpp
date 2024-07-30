@@ -9,6 +9,7 @@
 #include "LRI_CV_Tools.h"
 #include "Inverse_Matrix.h"
 #include "../module_base/mathzone.h"
+#include "../module_hamilt_pw/hamilt_pwdft/global.h"
 
 template<typename Tdata>
 RI::Tensor<Tdata>
@@ -54,8 +55,10 @@ template<typename T, std::size_t N>
 bool LRI_CV_Tools::exist(const std::array<T,N> &dV)
 {
 	for(size_t i=0; i<3; ++i)
+	{
 		if(!dV[i].empty())
 			return true;
+	}
 	return false;
 }
 
