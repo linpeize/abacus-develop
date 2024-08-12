@@ -2,6 +2,7 @@
 
 #include "module_base/global_variable.h"
 #include "module_base/tool_title.h"
+#include "module_io/cube_io.h"
 #include "module_io/dos_nao.h"
 #include "module_io/nscf_band.h"
 #include "module_io/output_dmk.h"
@@ -10,10 +11,11 @@
 #include "module_io/output_sk.h"
 #include "module_io/to_qo.h"
 #include "module_io/write_HS.h"
-#include "module_io/write_vxc.hpp"
 #include "module_io/write_eband_terms.hpp"
+#include "module_io/write_elecstat_pot.h"
 #include "module_io/write_istate_info.h"
 #include "module_io/write_proj_band_lcao.h"
+#include "module_io/write_vxc.hpp"
 #include "module_parameter/parameter.h"
 
 //--------------temporary----------------------------
@@ -217,8 +219,7 @@ void ESolver_KS_LCAO<TK, TR>::before_all_runners(const Input_para& inp, UnitCell
     // 10) initialize the HSolver
     if (this->phsol == nullptr)
     {
-        this->phsol = new hsolver::HSolverLCAO<TK>(&(this->pv));
-        this->phsol->method = GlobalV::KS_SOLVER;
+        this->phsol = new hsolver::HSolverLCAO<TK>(&(this->pv), GlobalV::KS_SOLVER);
     }
 
     // 11) inititlize the charge density
@@ -706,7 +707,10 @@ void ESolver_KS_LCAO<TK, TR>::hamilt2density(int istep, int iter, double ethr)
         this->pelec->f_en.eband = 0.0;
         this->pelec->f_en.demet = 0.0;
 
-        this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER);
+        // this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER);
+        hsolver::HSolverLCAO<TK> hsolver_lcao_obj(&(this->pv), GlobalV::KS_SOLVER);
+        hsolver_lcao_obj.solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER, false);
+
 
         if (PARAM.inp.out_bandgap)
         {
@@ -915,12 +919,14 @@ void ESolver_KS_LCAO<TK, TR>::update_pot(const int istep, const int iter)
 //! 3) output exx matrix
 //! 4) output charge density and density matrix
 //! 5) cal_MW? (why put it here?)
-//! 6) calculate the total energy?
 //------------------------------------------------------------------------------
 template <typename TK, typename TR>
-void ESolver_KS_LCAO<TK, TR>::iter_finish(int iter)
+void ESolver_KS_LCAO<TK, TR>::iter_finish(int& iter)
 {
     ModuleBase::TITLE("ESolver_KS_LCAO", "iter_finish");
+
+    // call iter_finish() of ESolver_KS
+    ESolver_KS<TK>::iter_finish(iter);
 
     // 1) mix density matrix if mixing_restart + mixing_dmr + not first
     // mixing_restart at every iter
@@ -979,23 +985,82 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(int iter)
             GlobalC::restart.save_disk("Eexx", 0, 1, &this->pelec->f_en.exx);
         }
     }
+
+    if (GlobalC::exx_info.info_global.cal_exx && this->conv_elec)
+    {
+        if (GlobalC::exx_info.info_ri.real_number)
+        {
+            this->conv_elec = this->exd->exx_after_converge(
+                *this->p_hamilt,
+                *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
+                this->kv,
+                iter);
+        }
+        else
+        {
+            this->conv_elec = this->exc->exx_after_converge(
+                *this->p_hamilt,
+                *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM(),
+                this->kv,
+                iter);
+        }
+    }
 #endif
 
     // 4) output charge density and density matrix
-    bool print = false;
     if (this->out_freq_elec && iter % this->out_freq_elec == 0)
-    {
-        print = true;
-    }
-
-    if (print)
     {
         for (int is = 0; is < GlobalV::NSPIN; is++)
         {
-            this->create_Output_Rho(is, iter, "tmp_").write();
+            double* data = nullptr;
+            if (PARAM.inp.dm_to_rho)
+            {
+                data = this->pelec->charge->rho[is];
+            }
+            else
+            {
+                data = this->pelec->charge->rho_save[is];
+            }
+            std::string fn = GlobalV::global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_CHG.cube";
+            ModuleIO::write_cube(
+#ifdef __MPI
+                this->pw_big->bz,
+                this->pw_big->nbz,
+                this->pw_rhod->nplane,
+                this->pw_rhod->startz_current,
+#endif
+                data,
+                is,
+                GlobalV::NSPIN,
+                0,
+                fn,
+                this->pw_rhod->nx,
+                this->pw_rhod->ny,
+                this->pw_rhod->nz,
+                this->pelec->eferm.get_efval(is),
+                &(GlobalC::ucell),
+                3,
+                1);
             if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
             {
-                this->create_Output_Kin(is, iter, "tmp_").write();
+                fn = GlobalV::global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_TAU.cube";
+                ModuleIO::write_cube(
+#ifdef __MPI
+                    this->pw_big->bz,
+                    this->pw_big->nbz,
+                    this->pw_rhod->nplane,
+                    this->pw_rhod->startz_current,
+#endif
+                    this->pelec->charge->kin_r_save[is],
+                    is,
+                    GlobalV::NSPIN,
+                    0,
+                    fn,
+                    this->pw_rhod->nx,
+                    this->pw_rhod->ny,
+                    this->pw_rhod->nz,
+                    this->pelec->eferm.get_efval(is),
+                    &(GlobalC::ucell));
             }
         }
     }
@@ -1009,23 +1074,20 @@ void ESolver_KS_LCAO<TK, TR>::iter_finish(int iter)
         sc.cal_MW(iter, this->p_hamilt);
     }
 
-    // 6) calculate the total energy.
-    this->pelec->cal_energies(2);
+    // 6) use the converged occupation matrix for next MD/Relax SCF calculation
+    if (GlobalV::dft_plus_u && this->conv_elec)
+    {
+        GlobalC::dftu.initialed_locale = true;
+    }
 }
 
 //------------------------------------------------------------------------------
 //! the 14th function of ESolver_KS_LCAO: after_scf
 //! mohan add 2024-05-11
-//! 1) write charge difference into files for charge extrapolation
+//! 1) call after_scf() of ESolver_KS
 //! 2) write density matrix for sparse matrix
-//! 3) write charge density
 //! 4) write density matrix
-//! 5) write Vxc
 //! 6) write Exx matrix
-//! 7) write potential
-//! 8) write convergence
-//! 9) write fermi energy
-//! 10) write eigenvalues
 //! 11) write deepks information
 //! 12) write rpa information
 //! 13) write HR in npz format
@@ -1040,17 +1102,8 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
 {
     ModuleBase::TITLE("ESolver_KS_LCAO", "after_scf");
 
-    // 1) write charge difference into files for charge extrapolation
-    if (GlobalV::CALCULATION != "scf")
-    {
-        this->CE.save_files(istep,
-                            GlobalC::ucell,
-#ifdef __MPI
-                            this->pw_big,
-#endif
-                            this->pelec->charge,
-                            &this->sf);
-    }
+    // 1) call after_scf() of ESolver_KS
+    ESolver_KS<TK>::after_scf(istep);
 
     // 2) write density matrix for sparse matrix
     ModuleIO::write_dmr(dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)->get_DM()->get_DMR_vector(),
@@ -1060,20 +1113,7 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
                         GlobalV::out_app_flag,
                         istep);
 
-    // 3) write charge density
-    if (PARAM.inp.out_chg)
-    {
-        for (int is = 0; is < GlobalV::NSPIN; is++)
-        {
-            this->create_Output_Rho(is, istep).write();
-            if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
-            {
-                this->create_Output_Kin(is, istep).write();
-            }
-        }
-    }
-
-    // 4) write density matrix
+    // 3) write density matrix
     if (PARAM.inp.out_dm)
     {
         std::vector<double> efermis(GlobalV::NSPIN == 2 ? 2 : 1);
@@ -1090,7 +1130,7 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
     }
 
 #ifdef __EXX
-    // 5) write Exx matrix
+    // 4) write Exx matrix
     if (GlobalC::exx_info.info_global.cal_exx) // Peize Lin add if 2022.11.14
     {
         const std::string file_name_exx = GlobalV::global_out_dir + "HexxR"
@@ -1102,21 +1142,6 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
         }
     }
 #endif
-
-    // 6) write potential
-    this->create_Output_Potential(istep).write();
-
-    // 7) write convergence
-    ModuleIO::output_convergence_after_scf(this->conv_elec, this->pelec->f_en.etot);
-
-    // 8) write fermi energy
-    ModuleIO::output_efermi(this->conv_elec, this->pelec->eferm.ef);
-
-    // 9) write eigenvalues
-    if (GlobalV::OUT_LEVEL != "m")
-    {
-        this->pelec->print_eigenvalue(GlobalV::ofs_running);
-    }
 
     // 10) write deepks information
 #ifdef __DEEPKS
@@ -1230,48 +1255,6 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(const int istep)
                        GlobalV::NPROC);
         tqo.calculate();
     }
-}
-
-//------------------------------------------------------------------------------
-//! the 15th function of ESolver_KS_LCAO: do_after_converge
-//! mohan add 2024-05-11
-//------------------------------------------------------------------------------
-template <typename TK, typename TR>
-bool ESolver_KS_LCAO<TK, TR>::do_after_converge(int& iter)
-{
-    ModuleBase::TITLE("ESolver_KS_LCAO", "do_after_converge");
-
-    if (GlobalV::dft_plus_u)
-    {
-        // use the converged occupation matrix for next MD/Relax SCF calculation
-        GlobalC::dftu.initialed_locale = true;
-    }
-    // FIXME: for developer who want to test restarting DeePKS with same Descriptor/PDM in last MD step
-    // RUN: " GlobalC::ld.set_init_pdm(true); " can skip the calculation of PDM in the next iter_init
-
-#ifdef __EXX
-    if (GlobalC::exx_info.info_global.cal_exx)
-    {
-        if (GlobalC::exx_info.info_ri.real_number) {
-            return this->exd->exx_after_converge(
-                *this->p_hamilt,
-                *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)
-                ->get_DM(),
-                this->kv,
-                iter);
-        }
-        else {
-            return this->exc->exx_after_converge(
-                *this->p_hamilt,
-                *dynamic_cast<const elecstate::ElecStateLCAO<TK>*>(this->pelec)
-                ->get_DM(),
-                this->kv,
-                iter);
-        }
-    }
-#endif // __EXX
-
-    return true;
 }
 
 //------------------------------------------------------------------------------

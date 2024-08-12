@@ -1,21 +1,17 @@
 #ifndef ESOLVER_KS_H
 #define ESOLVER_KS_H
-#include <string.h>
-
-#include <fstream>
-
 #include "esolver_fp.h"
 #include "module_basis/module_pw/pw_basis_k.h"
 #include "module_cell/klist.h"
-#include "module_elecstate/module_charge/charge_extra.h"
 #include "module_elecstate/module_charge/charge_mixing.h"
 #include "module_hamilt_general/hamilt.h"
 #include "module_hamilt_pw/hamilt_pwdft/wavefunc.h"
 #include "module_hsolver/hsolver.h"
-#include "module_psi/psi.h"
 #include "module_io/cal_test.h"
-#include "module_io/output_potential.h"
-#include "module_io/output_rho.h"
+#include "module_psi/psi.h"
+
+#include <fstream>
+#include <cstring>
 namespace ModuleESolver
 {
 
@@ -30,7 +26,9 @@ class ESolver_KS : public ESolver_FP
         //! Deconstructor
 		virtual ~ESolver_KS();
 
-		double scf_thr;   // scf threshold
+		double scf_thr;   // scf density threshold
+
+		double scf_ene_thr; // scf energy threshold
 
 		double drho;      // the difference between rho_in (before HSolver) and rho_out (After HSolver)
 
@@ -38,11 +36,9 @@ class ESolver_KS : public ESolver_FP
 
 		int niter;        // iter steps actually used in scf
 
-		bool conv_elec;   // If electron density is converged in scf.
+        int out_freq_elec; // frequency for output
 
-		int out_freq_elec;// frequency for output
-
-		virtual void before_all_runners(const Input_para& inp, UnitCell& cell) override;
+        virtual void before_all_runners(const Input_para& inp, UnitCell& cell) override;
 
 		virtual void init_after_vc(const Input_para& inp, UnitCell& cell) override;    // liuyu add 2023-03-09
 
@@ -71,18 +67,15 @@ class ESolver_KS : public ESolver_FP
 		virtual void iter_init(const int istep, const int iter) {};
 
 		//! Something to do after hamilt2density function in each iter loop.
-		virtual void iter_finish(const int iter) {};
+        virtual void iter_finish(int& iter);
 
-		//! Something to do after SCF iterations when SCF is converged or comes to the max iter step.
-		virtual void after_scf(const int istep) {};
+        //! Something to do after SCF iterations when SCF is converged or comes to the max iter step.
+        virtual void after_scf(const int istep);
 
-		//! <Temporary> It should be replaced by a function in Hamilt Class
+        //! <Temporary> It should be replaced by a function in Hamilt Class
 		virtual void update_pot(const int istep, const int iter) {};
 
-		//! choose strategy when charge density convergence achieved
-		virtual bool do_after_converge(int& iter){return true;}
-
-	protected:
+    protected:
 
 		// Print the headline on the screen:
 		// ITER   ETOT(eV)       EDIFF(eV)      DRHO    TIME(s) 
@@ -107,15 +100,6 @@ class ESolver_KS : public ESolver_FP
 				const int istep, 
 				const int iter);
 
-		/// @brief create a new ModuleIO::Output_Rho object to output charge density
-		ModuleIO::Output_Rho create_Output_Rho(int is, int iter, const std::string& prefix="None");
-
-		/// @brief create a new ModuleIO::Output_Rho object to print kinetic energy density
-		ModuleIO::Output_Rho create_Output_Kin(int is, int iter, const std::string& prefix = "None");
-
-		/// @brief create a new ModuleIO::Output_Potential object to print potential
-		ModuleIO::Output_Potential create_Output_Potential(int iter, const std::string& prefix = "None");
-
         //! Solve Hamitonian
 		hsolver::HSolver<T, Device>* phsol = nullptr;
 
@@ -128,10 +112,8 @@ class ESolver_KS : public ESolver_FP
 
 		wavefunc wf;
 
-		Charge_Extra CE;
-
-		// wavefunction coefficients
-		psi::Psi<T>* psi = nullptr;
+        // wavefunction coefficients
+        psi::Psi<T>* psi = nullptr;
 
 	protected:
 

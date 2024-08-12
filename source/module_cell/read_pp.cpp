@@ -16,15 +16,6 @@ Pseudopot_upf::Pseudopot_upf()
 
 Pseudopot_upf::~Pseudopot_upf()
 {
-    delete[] kbeta;
-    delete[] els_beta;
-    delete[] nchi;
-    delete[] epseu;
-    delete[] rcut_chi;
-    delete[] rcutus_chi;
-    delete[] rinner;
-    delete[] rcut;
-    delete[] rcutus;
 }
 
 int Pseudopot_upf::init_pseudo_reader(const std::string &fn, std::string &type, Atom_pseudo& pp)
@@ -44,36 +35,36 @@ int Pseudopot_upf::init_pseudo_reader(const std::string &fn, std::string &type, 
 	{
 		set_pseudo_type(fn, type);
 	}
+
+	int info = -1;
 	// read in the .UPF type of pseudopotentials
 	// if(GlobalV::global_pseudo_type=="upf")
 	if (type == "upf")
 	{
-		int info = read_pseudo_upf(ifs, pp);
-		return info;
+		info = read_pseudo_upf(ifs, pp);
 	}
 	// read in the .vwr type of pseudopotentials
 	// else if(GlobalV::global_pseudo_type=="vwr")
 	else if (type == "vwr")
 	{
-		int info = read_pseudo_vwr(ifs, pp);
-		return info;
+		info = read_pseudo_vwr(ifs, pp);
 	}
 	// else if(GlobalV::global_pseudo_type=="upf201")
 	else if (type == "upf201")
 	{
-		int info = read_pseudo_upf201(ifs, pp);
-		return info;
+		info = read_pseudo_upf201(ifs, pp);
 	}
 	// else if(GlobalV::global_pseudo_type=="blps") // sunliang added 2021.7
 	else if (type == "blps")
 	{
-		int info = read_pseudo_blps(ifs, pp);
-		return info;
+		info = read_pseudo_blps(ifs, pp);
 	}
     else
     {
         return 4;
     }
+
+	return info;
 }
 
 
@@ -460,7 +451,7 @@ void Pseudopot_upf::set_upf_q(Atom_pseudo& pp)
                                 break;
                             }
                         }
-                        this->setqfnew(nqf, ilast, l, 2, &(qfcoef(nb, mb, l, 0)), pp.r, &(pp.qfuncl(l, nmb, 0)));
+                        this->setqfnew(nqf, ilast, l, 2, &(qfcoef(nb, mb, l, 0)), pp.r.data(), &(pp.qfuncl(l, nmb, 0)));
                     }
                 }
             }
