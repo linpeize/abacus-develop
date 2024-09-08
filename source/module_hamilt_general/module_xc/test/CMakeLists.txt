@@ -257,7 +257,11 @@ AddTest(
   LIBS MPI::MPI_CXX Libxc::xc ${math_libs} psi device container parameter
   SOURCES test_xc3.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
-    ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp  
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../../../module_base/matrix.cpp
@@ -271,7 +275,11 @@ AddTest(
   LIBS MPI::MPI_CXX Libxc::xc ${math_libs} psi device container parameter
   SOURCES test_xc3.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
-    ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp  
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../../../module_base/matrix.cpp
@@ -284,7 +292,12 @@ AddTest(
   TARGET XCTest_SCAN
   LIBS MPI::MPI_CXX Libxc::xc parameter
   SOURCES test_xc4.cpp ../xc_functional.cpp ../xc_functional_wrapper_xc.cpp
-    ../xc_functional_wrapper_gcxc.cpp ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_wrapper_gcxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp  
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp 
     ../xc_funct_exch_gga.cpp ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp 
 )
@@ -294,7 +307,11 @@ AddTest(
   LIBS MPI::MPI_CXX Libxc::xc ${math_libs} psi device container parameter
   SOURCES test_xc5.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
-    ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp  
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../xc_functional_vxc.cpp
@@ -310,7 +327,11 @@ AddTest(
   LIBS MPI::MPI_CXX Libxc::xc ${math_libs} psi device container parameter
   SOURCES test_xc5.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
-    ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp     
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../../../module_base/matrix.cpp ../../../module_base/timer.cpp
@@ -327,7 +348,11 @@ AddTest(
   LIBS MPI::MPI_CXX Libxc::xc ${math_libs} psi device container parameter
   SOURCES test_xc5.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
-    ../xc_functional_wrapper_tauxc.cpp
+    ../xc_functional_libxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_wrapper_xc.cpp
+    ../xc_functional_libxc_wrapper_gcxc.cpp
+    ../xc_functional_libxc_wrapper_tauxc.cpp  
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../../../module_base/matrix.cpp ../../../module_base/timer.cpp

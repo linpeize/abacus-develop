@@ -2,19 +2,22 @@
 // it includes 1 subroutine:
 // 1. tau_xc
 
-#include "xc_functional.h"
+#ifdef USE_LIBXC
+
+#include "xc_functional_libxc.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 
 //tau_xc and tau_xc_spin: interface for calling xc_mgga_exc_vxc from LIBXC
 //XC_POLARIZED, XC_UNPOLARIZED: internal flags used in LIBXC, denote the polarized(nspin=1) or unpolarized(nspin=2) calculations, definition can be found in xc.h from LIBXC
-#ifdef USE_LIBXC
-void XC_Functional::tau_xc(const double &rho, const double &grho, const double &atau, double &sxc,
+void XC_Functional_Libxc::tau_xc(
+            const std::vector<int> &func_id,
+    const double &rho, const double &grho, const double &atau, double &sxc,
           double &v1xc, double &v2xc, double &v3xc)
 {
     double s, v1, v2, v3;
 	double lapl_rho, vlapl_rho;
     lapl_rho = grho;
-    std::vector<xc_func_type> funcs = init_func(XC_UNPOLARIZED);
+    std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func(func_id, XC_UNPOLARIZED);
     
     sxc = 0.0; v1xc = 0.0; v2xc = 0.0; v3xc = 0.0;
 
@@ -35,20 +38,22 @@ void XC_Functional::tau_xc(const double &rho, const double &grho, const double &
         v1xc += v1;
         v3xc += v3;
     }
-    finish_func(funcs);
+    XC_Functional_Libxc::finish_func(funcs);
 
 	return;
 }
 
 
-void XC_Functional::tau_xc_spin(double rhoup, double rhodw, 
+void XC_Functional_Libxc::tau_xc_spin(
+        const std::vector<int> &func_id,
+        double rhoup, double rhodw, 
         ModuleBase::Vector3<double> gdr1, ModuleBase::Vector3<double> gdr2,
         double tauup, double taudw,
         double &sxc, double &v1xcup, double &v1xcdw, double &v2xcup, double &v2xcdw, double &v2xcud,
         double &v3xcup, double &v3xcdw)
 {
 
-	std::vector<xc_func_type> funcs = init_func(XC_POLARIZED);
+	std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func(func_id, XC_POLARIZED);
 
     double *rho, *grho, *tau, *v1xc, *v2xc, *v3xc, *sgn, s;
     sxc = v1xcup = v1xcdw = 0.0;
@@ -108,7 +113,7 @@ void XC_Functional::tau_xc_spin(double rhoup, double rhodw,
     delete[] v2xc;
     delete[] v3xc;
     delete[] sgn;
-    finish_func(funcs);
+    XC_Functional_Libxc::finish_func(funcs);
 
 	return;
 }
