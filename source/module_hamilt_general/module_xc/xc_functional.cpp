@@ -18,9 +18,14 @@ int XC_Functional::func_type = 0;
 bool XC_Functional::use_libxc = true;
 double XC_Functional::hybrid_alpha = 0.25;
 
-void XC_Functional::get_hybrid_alpha(const double alpha_in)
+void XC_Functional::set_hybrid_alpha(const double alpha_in)
 {
     hybrid_alpha = alpha_in;
+}
+
+double XC_Functional::get_hybrid_alpha()
+{
+    return hybrid_alpha;
 }
 
 int XC_Functional::get_func_type()

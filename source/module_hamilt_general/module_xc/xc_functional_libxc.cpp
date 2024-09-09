@@ -4,6 +4,10 @@
 #include "module_parameter/parameter.h"
 #include "module_base/tool_quit.h"
 
+#ifdef __EXX
+#include "module_hamilt_pw/hamilt_pwdft/global.h"		// just for GlobalC::exx_info
+#endif
+
 #include <xc.h>
 
 #include <vector>
