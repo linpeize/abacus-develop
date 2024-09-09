@@ -12,6 +12,7 @@ add_library(
     xc_funct_corr_gga.cpp
     xc_funct_hcth.cpp
     xc_functional_libxc.cpp
+    xc_functional_libxc_tools.cpp
     xc_functional_libxc_vxc.cpp
     xc_functional_libxc_wrapper_xc.cpp
     xc_functional_libxc_wrapper_gcxc.cpp

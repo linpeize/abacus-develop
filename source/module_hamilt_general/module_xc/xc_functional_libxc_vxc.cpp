@@ -22,13 +22,9 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     ModuleBase::TITLE("XC_Functional","v_xc_libxc");
     ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
 
-    const int nspin = 
+    const int nspin =
         (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
         ? 1 : 2;
-
-    double etxc = 0.0;
-    double vtxc = 0.0;
-    ModuleBase::matrix v(nspin,nrxx);
 
     //----------------------------------------------------------
     // xc_func_type is defined in Libxc package
@@ -54,85 +50,30 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     }();
 
     // converting rho
-    std::vector<double> rho(nrxx*nspin);
+    std::vector<double> rho;
     std::vector<double> amag;
     if(1==nspin || 2==GlobalV::NSPIN)
     {
-        #ifdef _OPENMP
-        #pragma omp parallel for collapse(2) schedule(static, 1024)
-        #endif
-        for( int is=0; is<nspin; ++is )
-            for( int ir=0; ir<nrxx; ++ir )
-                rho[ir*nspin+is] = chr->rho[is][ir] + 1.0/nspin*chr->rho_core[ir];
+        rho = XC_Functional_Libxc::convert_rho(nspin, nrxx, chr);
     }
     else
     {
-        amag.resize(nrxx);
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for( int ir=0; ir<nrxx; ++ir )
-        {
-            const double arhox = std::abs( chr->rho[0][ir] + chr->rho_core[ir] );
-            amag[ir] = std::sqrt( std::pow(chr->rho[1][ir],2) + std::pow(chr->rho[2][ir],2) + std::pow(chr->rho[3][ir],2) );
-            const double amag_clip = (amag[ir]<arhox) ? amag[ir] : arhox;
-            rho[ir*nspin+0] = (arhox + amag_clip) / 2.0;
-            rho[ir*nspin+1] = (arhox - amag_clip) / 2.0;
-        }        
+        std::tuple<std::vector<double>,std::vector<double>> rho_amag = XC_Functional_Libxc::convert_rho_amag_nspin4(nspin, nrxx, chr);
+        rho = std::get<0>(std::move(rho_amag));
+        amag = std::get<1>(std::move(rho_amag));
     }
 
     std::vector<std::vector<ModuleBase::Vector3<double>>> gdr;
     std::vector<double> sigma;
     if(is_gga)
     {
-        // calculating grho
-        gdr.resize( nspin );
-        for( int is=0; is!=nspin; ++is )
-        {
-            std::vector<double> rhor(nrxx);
-            #ifdef _OPENMP
-            #pragma omp parallel for schedule(static, 1024)
-            #endif
-            for(int ir=0; ir<nrxx; ++ir)
-                rhor[ir] = rho[ir*nspin+is];
-            //------------------------------------------
-            // initialize the charge density array in reciprocal space
-            // bring electron charge density from real space to reciprocal space
-            //------------------------------------------
-            std::vector<std::complex<double>> rhog(chr->rhopw->npw);
-            chr->rhopw->real2recip(rhor.data(), rhog.data());
+        gdr = XC_Functional_Libxc::cal_gdr(nspin, rho, tpiba, chr);
+        sigma = XC_Functional_Libxc::convert_sigma(gdr);
+    }
 
-            //-------------------------------------------
-            // compute the gradient of charge density and
-            // store the gradient in gdr[is]
-            //-------------------------------------------
-            gdr[is].resize(nrxx);
-            XC_Functional::grad_rho(rhog.data(), gdr[is].data(), chr->rhopw, tpiba);
-        } // end for(is)
-
-        // converting grho
-        sigma.resize( nrxx * ((1==nspin)?1:3) );
-        if( 1==nspin )
-        {
-            #ifdef _OPENMP
-            #pragma omp parallel for schedule(static, 1024)
-            #endif
-            for( int ir=0; ir<nrxx; ++ir )
-                sigma[ir] = gdr[0][ir]*gdr[0][ir];
-        }
-        else
-        {
-            #ifdef _OPENMP
-            #pragma omp parallel for schedule(static, 256)
-            #endif
-            for( int ir=0; ir<nrxx; ++ir )
-            {
-                sigma[ir*3]   = gdr[0][ir]*gdr[0][ir];
-                sigma[ir*3+1] = gdr[0][ir]*gdr[1][ir];
-                sigma[ir*3+2] = gdr[1][ir]*gdr[1][ir];
-            }
-        }
-    } // end if(is_gga)
+    double etxc = 0.0;
+    double vtxc = 0.0;
+    ModuleBase::matrix v(nspin,nrxx);
 
     for( xc_func_type &func : funcs )
     {
@@ -143,22 +84,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
         xc_func_set_dens_threshold(&func, rho_threshold);
 
         // sgn for threshold mask
-        std::vector<double> sgn(nrxx*nspin, 1.0);
-        // in the case of GGA correlation for polarized case,
-        // a cutoff for grho is required to ensure that libxc gives reasonable results
-        if(nspin==2 && func.info->family != XC_FAMILY_LDA && func.info->kind==XC_CORRELATION)
-        {
-            #ifdef _OPENMP
-            #pragma omp parallel for schedule(static, 512)
-            #endif
-            for( int ir=0; ir<nrxx; ++ir )
-            {
-                if ( rho[ir*2]<rho_threshold || std::sqrt(std::abs(sigma[ir*3]))<grho_threshold )
-                    sgn[ir*2] = 0.0;
-                if ( rho[ir*2+1]<rho_threshold || std::sqrt(std::abs(sigma[ir*3+2]))<grho_threshold )
-                    sgn[ir*2+1] = 0.0;
-            }
-        }
+        const std::vector<double> sgn = XC_Functional_Libxc::cal_sgn(rho_threshold, grho_threshold, func, nspin, nrxx, rho, sigma);
 
         std::vector<double> exc   ( nrxx                    );
         std::vector<double> vrho  ( nrxx * nspin            );
@@ -167,7 +93,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
         {
             case XC_FAMILY_LDA:
                 // call Libxc function: xc_lda_exc_vxc
-                xc_lda_exc_vxc( &func, nrxx, rho.data(), 
+                xc_lda_exc_vxc( &func, nrxx, rho.data(),
                     exc.data(), vrho.data() );
                 break;
             case XC_FAMILY_GGA:
@@ -182,73 +108,19 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
                 break;
         }
 
-        #ifdef _OPENMP
-        #pragma omp parallel for collapse(2) reduction(+:etxc) schedule(static, 256)
-        #endif
-        for( int is=0; is<nspin; ++is )
-            for( int ir=0; ir< nrxx; ++ir )
-                etxc += ModuleBase::e2 * exc[ir] * rho[ir*nspin+is] * sgn[ir*nspin+is];
-
-        #ifdef _OPENMP
-        #pragma omp parallel for collapse(2) reduction(+:vtxc) schedule(static, 256)
-        #endif
-        for( int is=0; is<nspin; ++is )
-        {
-            for( int ir=0; ir< nrxx; ++ir )
-            {
-                const double v_tmp = ModuleBase::e2 * vrho[ir*nspin+is] * sgn[ir*nspin+is];
-                v(is,ir) += v_tmp;
-                vtxc += v_tmp * rho[ir*nspin+is];
-            }
-        }
-
-        if(func.info->family == XC_FAMILY_GGA || func.info->family == XC_FAMILY_HYB_GGA)
-        {
-            std::vector<std::vector<ModuleBase::Vector3<double>>> h( nspin,
-                std::vector<ModuleBase::Vector3<double>>(nrxx) );
-            if( 1==nspin )
-            {
-                #ifdef _OPENMP
-                #pragma omp parallel for schedule(static, 1024)
-                #endif
-                for( int ir=0; ir< nrxx; ++ir )
-                    h[0][ir] = 2.0 * gdr[0][ir] * vsigma[ir] * 2.0 * sgn[ir];
-            }
-            else
-            {
-                #ifdef _OPENMP
-                #pragma omp parallel for schedule(static, 1024)
-                #endif
-                for( int ir=0; ir< nrxx; ++ir )
-                {
-                    h[0][ir] = 2.0 * (gdr[0][ir] * vsigma[ir*3  ] * sgn[ir*2  ] * 2.0 
-                                    + gdr[1][ir] * vsigma[ir*3+1] * sgn[ir*2]   * sgn[ir*2+1]);
-                    h[1][ir] = 2.0 * (gdr[1][ir] * vsigma[ir*3+2] * sgn[ir*2+1] * 2.0 
-                                    + gdr[0][ir] * vsigma[ir*3+1] * sgn[ir*2]   * sgn[ir*2+1]);
-                }
-            }
-
-            // define two dimensional array dh [ nspin, nrxx ]
-            std::vector<std::vector<double>> dh(nspin, std::vector<double>(nrxx));
-            for( int is=0; is!=nspin; ++is )
-                XC_Functional::grad_dot( h[is].data(), dh[is].data(), chr->rhopw, tpiba);
-
-            double rvtxc = 0.0;
-            #ifdef _OPENMP
-            #pragma omp parallel for collapse(2) reduction(+:rvtxc) schedule(static, 256)
-            #endif
-            for( int is=0; is<nspin; ++is )
-            {
-                for( int ir=0; ir< nrxx; ++ir )
-                {
-                    rvtxc += dh[is][ir] * rho[ir*nspin+is];
-                    v(is,ir) -= dh[is][ir];
-                }
-            }
-
-            vtxc -= rvtxc;
-        } // end if(func.info->family == XC_FAMILY_GGA || func.info->family == XC_FAMILY_HYB_GGA))
+        etxc += XC_Functional_Libxc::convert_etxc(nspin, nrxx, sgn, rho, exc);
+        vtxc += XC_Functional_Libxc::convert_vtxc_v(
+            func, nspin, nrxx,
+            sgn, rho, gdr,
+            vrho, vsigma,
+            tpiba, chr,
+            v);
     } // end for( xc_func_type &func : funcs )
+
+    if(4==GlobalV::NSPIN)
+    {
+        v = XC_Functional_Libxc::convert_v_nspin4(nrxx, chr, amag, v);
+    }
 
     //-------------------------------------------------
     // for MPI, reduce the exchange-correlation energy
@@ -261,40 +133,10 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     etxc *= omega / chr->rhopw->nxyz;
     vtxc *= omega / chr->rhopw->nxyz;
 
-    finish_func(funcs);
+    XC_Functional_Libxc::finish_func(funcs);
 
-    if(1==GlobalV::NSPIN || 2==GlobalV::NSPIN)
-    {
-        ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
-        return std::make_tuple( etxc, vtxc, std::move(v) );
-    }
-    else if(4==GlobalV::NSPIN)
-    {
-        constexpr double vanishing_charge = 1.0e-10;
-        ModuleBase::matrix v_nspin4(GlobalV::NSPIN,nrxx);
-        for( int ir=0; ir<nrxx; ++ir )
-            v_nspin4(0,ir) = 0.5 * (v(0,ir)+v(1,ir));
-        if(GlobalV::DOMAG || GlobalV::DOMAG_Z)
-        {
-            for( int ir=0; ir<nrxx; ++ir )
-            {
-                if ( amag[ir] > vanishing_charge )
-                {
-                    const double vs = 0.5 * (v(0,ir)-v(1,ir));
-                    for(int ipol=1; ipol<4; ++ipol)
-                        v_nspin4(ipol,ir) = vs * chr->rho[ipol][ir] / amag[ir];
-                }
-            }
-        }
-
-        ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
-        return std::make_tuple( etxc, vtxc, std::move(v_nspin4) );
-    } // end if(4==GlobalV::NSPIN)
-    else//NSPIN != 1,2,4 is not supported
-    {
-        throw std::domain_error("GlobalV::NSPIN ="+std::to_string(GlobalV::NSPIN)
-            +" unfinished in "+std::string(__FILE__)+" line "+std::to_string(__LINE__));
-    }
+    ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
+    return std::make_tuple( etxc, vtxc, std::move(v) );
 }
 
 
@@ -334,79 +176,14 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
     // use can check on website, for example:
     // https://www.tddft.org/programs/libxc/manual/libxc-5.1.x/
     //----------------------------------------------------------
-    
+
     const int nspin = GlobalV::NSPIN;
     std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func( func_id, ( (1==nspin) ? XC_UNPOLARIZED:XC_POLARIZED ) );
 
-    // converting rho
-    std::vector<double> rho;
-    rho.resize(nrxx*nspin);
-#ifdef _OPENMP
-#pragma omp parallel for collapse(2) schedule(static, 1024)
-#endif
-    for( int is=0; is<nspin; ++is )
-    {
-        for( int ir=0; ir<nrxx; ++ir )
-        {
-            rho[ir*nspin+is] = chr->rho[is][ir] + 1.0/nspin*chr->rho_core[ir];
-        }
-    }
-
-    std::vector<std::vector<ModuleBase::Vector3<double>>> gdr;
-    std::vector<double> sigma;
-
-    // calculating grho
-    gdr.resize( nspin );
-    for( int is=0; is!=nspin; ++is )
-    {
-        std::vector<double> rhor(nrxx);
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 1024)
-#endif
-        for(int ir=0; ir<nrxx; ++ir)
-        {
-            rhor[ir] = rho[ir*nspin+is];
-        }
-        //------------------------------------------
-        // initialize the charge density array in reciprocal space
-        // bring electron charge density from real space to reciprocal space
-        //------------------------------------------
-        std::vector<std::complex<double>> rhog(chr->rhopw->npw);
-        chr->rhopw->real2recip(rhor.data(), rhog.data());
-
-        //-------------------------------------------
-        // compute the gradient of charge density and
-        // store the gradient in gdr[is]
-        //-------------------------------------------
-        gdr[is].resize(nrxx);
-        XC_Functional::grad_rho(rhog.data(), gdr[is].data(), chr->rhopw, tpiba);
-    }
-
-    // converting grho
-    sigma.resize( nrxx * ((1==nspin)?1:3) );
-
-    if( 1==nspin )
-    {
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 1024)
-#endif
-        for( int ir=0; ir<nrxx; ++ir )
-        {
-            sigma[ir] = gdr[0][ir]*gdr[0][ir];
-        } 
-    }
-    else
-    {
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 256)
-#endif
-        for( int ir=0; ir<nrxx; ++ir )
-        {
-            sigma[ir*3]   = gdr[0][ir]*gdr[0][ir];
-            sigma[ir*3+1] = gdr[0][ir]*gdr[1][ir];
-            sigma[ir*3+2] = gdr[1][ir]*gdr[1][ir];
-        }
-    }
+    const std::vector<double> rho = XC_Functional_Libxc::convert_rho(nspin, nrxx, chr);
+    const std::vector<std::vector<ModuleBase::Vector3<double>>> gdr
+        = XC_Functional_Libxc::cal_gdr(nspin, rho, tpiba, chr);
+    const std::vector<double> sigma = XC_Functional_Libxc::convert_sigma(gdr);
 
     //converting kin_r
     std::vector<double> kin_r;
@@ -489,7 +266,7 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
                 }
 #endif
                 etxc += ModuleBase::e2 * exc[ir] * rho[ir*nspin+is]  * sgn[ir*nspin+is];
-            }   
+            }
         }
 
         //process vtxc
@@ -513,7 +290,9 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
         }
 
         //process vsigma
-        std::vector<std::vector<ModuleBase::Vector3<double>>> h( nspin, std::vector<ModuleBase::Vector3<double>>(nrxx) );
+        std::vector<std::vector<ModuleBase::Vector3<double>>> h(
+            nspin,
+            std::vector<ModuleBase::Vector3<double>>(nrxx) );
         if( 1==nspin )
         {
 #ifdef _OPENMP
@@ -545,9 +324,9 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
                     vsigma[ir*3+2] *= (1.0 - XC_Functional::hybrid_alpha);
                 }
 #endif
-                h[0][ir] = 2.0 * (gdr[0][ir] * vsigma[ir*3  ] * sgn[ir*2  ] * 2.0 
+                h[0][ir] = 2.0 * (gdr[0][ir] * vsigma[ir*3  ] * sgn[ir*2  ] * 2.0
                                 + gdr[1][ir] * vsigma[ir*3+1] * sgn[ir*2]   * sgn[ir*2+1]);
-                h[1][ir] = 2.0 * (gdr[1][ir] * vsigma[ir*3+2] * sgn[ir*2+1] * 2.0 
+                h[1][ir] = 2.0 * (gdr[1][ir] * vsigma[ir*3+2] * sgn[ir*2+1] * 2.0
                                 + gdr[0][ir] * vsigma[ir*3+1] * sgn[ir*2]   * sgn[ir*2+1]);
             }
         }
@@ -556,8 +335,8 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
         std::vector<std::vector<double>> dh(nspin, std::vector<double>( nrxx));
         for( int is=0; is!=nspin; ++is )
         {
-            XC_Functional::grad_dot( ModuleBase::GlobalFunc::VECTOR_TO_PTR(h[is]),
-                ModuleBase::GlobalFunc::VECTOR_TO_PTR(dh[is]), chr->rhopw,
+            XC_Functional::grad_dot( h[is].data(),
+                dh[is].data(), chr->rhopw,
                 tpiba);
         }
 
@@ -593,7 +372,7 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
             }
         }
     }
-        
+
     //-------------------------------------------------
     // for MPI, reduce the exchange-correlation energy
     //-------------------------------------------------
