@@ -9,7 +9,7 @@ AddTest(
 AddTest(
   TARGET XCTest_HSE
   LIBS MPI::MPI_CXX Libxc::xc parameter # required by global.h; for details, `remove_definitions(-D__MPI)`.
-  SOURCES test_xc1.cpp ../xc_functional.cpp
+  SOURCES test_xc1.cpp ../xc_functional.cpp ../xc_functional_libxc.cpp
 )
 
 
@@ -26,8 +26,6 @@ AddTest(
   SOURCES test_xc3.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
     ../xc_functional_libxc.cpp
-    ../xc_functional_libxc_tools.cpp
-    ../xc_functional_libxc_vxc.cpp
     ../xc_functional_libxc_wrapper_xc.cpp
     ../xc_functional_libxc_wrapper_gcxc.cpp
     ../xc_functional_libxc_wrapper_tauxc.cpp
@@ -45,8 +43,6 @@ AddTest(
   SOURCES test_xc4.cpp ../xc_functional.cpp ../xc_functional_wrapper_xc.cpp
     ../xc_functional_wrapper_gcxc.cpp
     ../xc_functional_libxc.cpp
-    ../xc_functional_libxc_tools.cpp
-    ../xc_functional_libxc_vxc.cpp
     ../xc_functional_libxc_wrapper_xc.cpp
     ../xc_functional_libxc_wrapper_gcxc.cpp
     ../xc_functional_libxc_wrapper_tauxc.cpp
@@ -60,14 +56,14 @@ AddTest(
   SOURCES test_xc5.cpp ../xc_functional_gradcorr.cpp ../xc_functional.cpp
     ../xc_functional_wrapper_xc.cpp ../xc_functional_wrapper_gcxc.cpp
     ../xc_functional_libxc.cpp
-    ../xc_functional_libxc_tools.cpp
-    ../xc_functional_libxc_vxc.cpp
     ../xc_functional_libxc_wrapper_xc.cpp
     ../xc_functional_libxc_wrapper_gcxc.cpp
     ../xc_functional_libxc_wrapper_tauxc.cpp
     ../xc_funct_corr_gga.cpp ../xc_funct_corr_lda.cpp ../xc_funct_exch_gga.cpp
     ../xc_funct_exch_lda.cpp ../xc_funct_hcth.cpp
     ../xc_functional_vxc.cpp
+    ../xc_functional_libxc_vxc.cpp
+    ../xc_functional_libxc_tools.cpp
     ../../../module_base/matrix.cpp
     ../../../module_base/memory.cpp
     ../../../module_base/timer.cpp

@@ -58,7 +58,7 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
     //such as for PBE we have:
     //        func_id.push_back(XC_GGA_X_PBE);
     //        func_id.push_back(XC_GGA_C_PBE);
-    
+
     func_id.clear();
     std::string xc_func = xc_func_in;
     std::transform(xc_func.begin(), xc_func.end(), xc_func.begin(), (::toupper));
@@ -128,7 +128,7 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
         func_id.push_back(XC_GGA_C_PBE);
         func_type = 2;
         use_libxc = false;
-	}	
+	}
 	else if ( xc_func == "BLYP") //B88+LYP
 	{
         func_id.push_back(XC_GGA_X_B88);
@@ -142,14 +142,14 @@ void XC_Functional::set_xc_type(const std::string xc_func_in)
         func_id.push_back(XC_GGA_C_P86);
         func_type = 2;
         use_libxc = false;
-	} 
+	}
 	else if ( xc_func == "PW91") //PW91_X+PW91_C
 	{
         func_id.push_back(XC_GGA_X_PW91);
         func_id.push_back(XC_GGA_C_PW91);
         func_type = 2;
         use_libxc = false;
-	} 
+	}
 	else if ( xc_func == "HCTH") //HCTH_X+HCTH_C
 	{
         func_id.push_back(XC_GGA_X_HCTH_A);

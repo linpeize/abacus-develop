@@ -149,8 +149,8 @@ namespace XC_Functional_Libxc
 	// the entire GGA functional, for nspin=2 case
 	extern void gcxc_spin_libxc(
 		const std::vector<int> &func_id,
-		double rhoup, double rhodw,
-		ModuleBase::Vector3<double> gdr1, ModuleBase::Vector3<double> gdr2,
+		const double rhoup, const double rhodw,
+		const ModuleBase::Vector3<double> gdr1, const ModuleBase::Vector3<double> gdr2,
 		double &sxc, double &v1xcup, double &v1xcdw, double &v2xcup, double &v2xcdw, double &v2xcud);
 
 

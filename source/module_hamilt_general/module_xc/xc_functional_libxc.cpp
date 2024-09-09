@@ -50,7 +50,7 @@ std::vector<xc_func_type> XC_Functional_Libxc::init_func(const std::vector<int> 
 	std::vector<xc_func_type> funcs;
 
 	//-------------------------------------------
-	// define a function named 'add_func', which 
+	// define a function named 'add_func', which
 	// initialize a functional according to its ID
 	//-------------------------------------------
 	auto add_func = [&]( const int func_id )
@@ -71,17 +71,17 @@ std::vector<xc_func_type> XC_Functional_Libxc::init_func(const std::vector<int> 
 #ifdef __EXX
 		else if( id == XC_HYB_GGA_XC_PBEH ) // PBE0
 		{
-			add_func( XC_HYB_GGA_XC_PBEH );		
-			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha, 
-				GlobalC::exx_info.info_global.hse_omega, 
+			add_func( XC_HYB_GGA_XC_PBEH );
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha,
+				GlobalC::exx_info.info_global.hse_omega,
 				GlobalC::exx_info.info_global.hse_omega };
-			xc_func_set_ext_params(&funcs.back(), parameter_hse);	
+			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}
 		else if( id == XC_HYB_GGA_XC_HSE06 ) // HSE06 hybrid functional
 		{
-			add_func( XC_HYB_GGA_XC_HSE06 );	
-			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha, 
-				GlobalC::exx_info.info_global.hse_omega, 
+			add_func( XC_HYB_GGA_XC_HSE06 );
+			double parameter_hse[3] = { GlobalC::exx_info.info_global.hybrid_alpha,
+				GlobalC::exx_info.info_global.hse_omega,
 				GlobalC::exx_info.info_global.hse_omega };
 			xc_func_set_ext_params(&funcs.back(), parameter_hse);
 		}

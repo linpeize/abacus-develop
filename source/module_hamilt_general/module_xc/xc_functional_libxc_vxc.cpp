@@ -205,9 +205,9 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
     std::vector<double> vtau   ( nrxx * nspin            );
     std::vector<double> vlapl  ( nrxx * nspin            );
 
-    const double rho_th  = 1e-8;
-    const double grho_th = 1e-12;
-    const double tau_th  = 1e-8;
+    constexpr double rho_th  = 1e-8;
+    constexpr double grho_th = 1e-12;
+    constexpr double tau_th  = 1e-8;
     // sgn for threshold mask
     std::vector<double> sgn( nrxx * nspin);
 #ifdef _OPENMP
