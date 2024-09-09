@@ -52,17 +52,8 @@ void ESolver_KS_LCAO<TK, TR>::nscf() {
     // then when the istep is a variable of scf or nscf,
     // istep becomes istep-1, this should be fixed in future
     int istep = 0;
-    if (this->phsol != nullptr)
-    {
-        // this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER, true);
-
-        hsolver::HSolverLCAO<TK> hsolver_lcao_obj(&(this->pv), GlobalV::KS_SOLVER);
-        hsolver_lcao_obj.solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER, true);
-    }
-    else
-    {
-        ModuleBase::WARNING_QUIT("ESolver_KS_PW", "HSolver has not been initialed!");
-    }
+    hsolver::HSolverLCAO<TK> hsolver_lcao_obj(&(this->pv), GlobalV::KS_SOLVER);
+    hsolver_lcao_obj.solve(this->p_hamilt, this->psi[0], this->pelec, GlobalV::KS_SOLVER, true);
 
     time_t time_finish = std::time(nullptr);
     ModuleBase::GlobalFunc::OUT_TIME("cal_bands", time_start, time_finish);
@@ -116,7 +107,7 @@ void ESolver_KS_LCAO<TK, TR>::nscf() {
     }
 
     // add by jingan in 2018.11.7
-    if (GlobalV::CALCULATION == "nscf" && PARAM.inp.towannier90)
+    if (PARAM.inp.calculation == "nscf" && PARAM.inp.towannier90)
     {
 #ifdef __LCAO
         std::cout << FmtCore::format("\n * * * * * *\n << Start %s.\n", "Wave function to Wannier90");
@@ -145,7 +136,8 @@ void ESolver_KS_LCAO<TK, TR>::nscf() {
                                        PARAM.inp.out_wannier_eig,
                                        PARAM.inp.out_wannier_wvfn_formatted,
                                        PARAM.inp.nnkpfile,
-                                       PARAM.inp.wannier_spin);
+                                       PARAM.inp.wannier_spin,
+                                       orb_);
 
             myWannier.calculate(this->pelec->ekb, this->kv, *(this->psi), &(this->pv));
         }
@@ -159,7 +151,8 @@ void ESolver_KS_LCAO<TK, TR>::nscf() {
         std::cout << FmtCore::format("\n * * * * * *\n << Start %s.\n", "Berry phase calculation");
         berryphase bp(&(this->pv));
         bp.lcao_init(this->kv,
-                     this->GridT); // additional step before calling
+                     this->GridT,
+                     orb_); // additional step before calling
                                    // macroscopic_polarization (why capitalize
                                    // the function name?)
         bp.Macroscopic_polarization(this->pw_wfc->npwk_max,

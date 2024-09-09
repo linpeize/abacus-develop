@@ -58,26 +58,10 @@ namespace ModuleESolver
     template <typename T>
     ESolver_KS_LIP<T>::~ESolver_KS_LIP()
     {
-        // delete HSolver and ElecState
-        this->deallocate_hsolver();
         // delete Hamilt
         this->deallocate_hamilt();
     }
 
-    template <typename T>
-    void ESolver_KS_LIP<T>::allocate_hsolver()
-    {
-        this->phsol = new hsolver::HSolver<T>();
-    }
-    template <typename T>
-    void ESolver_KS_LIP<T>::deallocate_hsolver()
-    {
-        if (this->phsol != nullptr)
-        {
-            delete (this->phsol);
-            this->phsol = nullptr;
-        }
-    }
     template <typename T>
     void ESolver_KS_LIP<T>::allocate_hamilt()
     {
@@ -102,9 +86,9 @@ namespace ModuleESolver
     {
         ESolver_KS_PW<T>::before_all_runners(inp, cell);
 #ifdef __EXX
-        if (GlobalV::CALCULATION == "scf" || GlobalV::CALCULATION == "relax"
-            || GlobalV::CALCULATION == "cell-relax"
-            || GlobalV::CALCULATION == "md") {
+        if (PARAM.inp.calculation == "scf" || PARAM.inp.calculation == "relax"
+            || PARAM.inp.calculation == "cell-relax"
+            || PARAM.inp.calculation == "md") {
             if (GlobalC::exx_info.info_global.cal_exx)
             {
                 XC_Functional::set_xc_first_loop(cell);
@@ -133,7 +117,6 @@ namespace ModuleESolver
         ModuleBase::TITLE("ESolver_KS_LIP", "hamilt2density");
         ModuleBase::timer::tick("ESolver_KS_LIP", "hamilt2density");
 
-        if (this->phsol != nullptr)
         {
             // reset energy
             this->pelec->f_en.eband = 0.0;
@@ -175,10 +158,7 @@ namespace ModuleESolver
                 }
             }
         }
-        else
-        {
-            ModuleBase::WARNING_QUIT("ESolver_KS_LIP", "HSolver has not been allocated.");
-        }
+   
         // add exx
 #ifdef __EXX
         if (GlobalC::exx_info.info_global.cal_exx) {

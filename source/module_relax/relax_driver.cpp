@@ -6,13 +6,14 @@
 #include "module_io/print_info.h"
 #include "module_io/read_exit_file.h"
 #include "module_io/write_wfc_r.h"
-
+#include "module_parameter/parameter.h"
+#include "module_io/cif_io.h"
 void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
 {
     ModuleBase::TITLE("Ions", "opt_ions");
     ModuleBase::timer::tick("Ions", "opt_ions");
 
-    if (GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax")
+    if (PARAM.inp.calculation == "relax" || PARAM.inp.calculation == "cell-relax")
     {
         if (!GlobalV::relax_new)
         {
@@ -34,9 +35,9 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
         time_t estart = time(nullptr);
 
         if (GlobalV::OUT_LEVEL == "ie"
-            && (GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax" || GlobalV::CALCULATION == "scf"
-                || GlobalV::CALCULATION == "nscf")
-            && (GlobalV::ESOLVER_TYPE != "lr"))
+            && (PARAM.inp.calculation == "relax" || PARAM.inp.calculation == "cell-relax" || PARAM.inp.calculation == "scf"
+                || PARAM.inp.calculation == "nscf")
+            && (PARAM.inp.esolver_type != "lr"))
         {
             Print_Info::print_screen(stress_step, force_step, istep);
         }
@@ -52,7 +53,7 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
         time_t fstart = time(nullptr);
         ModuleBase::matrix force;
         ModuleBase::matrix stress;
-        if (GlobalV::CALCULATION == "scf" || GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax")
+        if (PARAM.inp.calculation == "scf" || PARAM.inp.calculation == "relax" || PARAM.inp.calculation == "cell-relax")
         {
             // I'm considering putting force and stress
             // as part of ucell and use ucell to pass information
@@ -63,7 +64,7 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
             this->etot = p_esolver->cal_energy();
 
             // calculate and gather all parts of total ionic forces
-            if (GlobalV::CAL_FORCE)
+            if (PARAM.inp.cal_force)
             {
                 p_esolver->cal_force(force);
             }
@@ -73,7 +74,7 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
                 p_esolver->cal_stress(stress);
             }
 
-            if (GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax")
+            if (PARAM.inp.calculation == "relax" || PARAM.inp.calculation == "cell-relax")
             {
                 if (GlobalV::relax_new)
                 {
@@ -93,17 +94,17 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
                 // changelog 20240509
                 // because I move out the dependence on GlobalV from UnitCell::print_stru_file
                 // so its parameter is calculated here
-                bool need_orb = GlobalV::BASIS_TYPE == "pw";
+                bool need_orb = PARAM.inp.basis_type == "pw";
                 need_orb = need_orb && GlobalV::psi_initializer;
                 need_orb = need_orb && GlobalV::init_wfc.substr(0, 3) == "nao";
-                need_orb = need_orb || GlobalV::BASIS_TYPE == "lcao";
-                need_orb = need_orb || GlobalV::BASIS_TYPE == "lcao_in_pw";
+                need_orb = need_orb || PARAM.inp.basis_type == "lcao";
+                need_orb = need_orb || PARAM.inp.basis_type == "lcao_in_pw";
                 std::stringstream ss, ss1;
                 ss << GlobalV::global_out_dir << "STRU_ION_D";
                 GlobalC::ucell.print_stru_file(ss.str(),
                                                GlobalV::NSPIN,
                                                true,
-                                               GlobalV::CALCULATION == "md",
+                                               PARAM.inp.calculation == "md",
                                                PARAM.inp.out_mul,
                                                need_orb,
                                                GlobalV::deepks_setorb,
@@ -116,13 +117,15 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
                     GlobalC::ucell.print_stru_file(ss1.str(),
                                                    GlobalV::NSPIN,
                                                    true,
-                                                   GlobalV::CALCULATION == "md",
+                                                   PARAM.inp.calculation == "md",
                                                    PARAM.inp.out_mul,
                                                    need_orb,
                                                    GlobalV::deepks_setorb,
                                                    GlobalV::MY_RANK);
-
-                    GlobalC::ucell.print_cell_cif("STRU_NOW.cif");
+                    ModuleIO::CifParser::write(GlobalV::global_out_dir + "STRU_NOW.cif",
+                                               GlobalC::ucell,
+                                               "# Generated by ABACUS ModuleIO::CifParser",
+                                               "data_?");
                 }
 
                 if (p_esolver && stop && p_esolver->get_maxniter() == p_esolver->get_niter()
@@ -185,7 +188,7 @@ void Relax_Driver::relax_driver(ModuleESolver::ESolver* p_esolver)
         std::cout << " ION DYNAMICS FINISHED :)" << std::endl;
     }
 
-    if (GlobalV::CALCULATION == "relax" || GlobalV::CALCULATION == "cell-relax")
+    if (PARAM.inp.calculation == "relax" || PARAM.inp.calculation == "cell-relax")
     {
         ModuleBase::Global_File::delete_tmp_files();
     }

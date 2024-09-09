@@ -3,6 +3,7 @@ list(APPEND objects
     bessel_basis.cpp
     cal_test.cpp
     cal_dos.cpp
+    cif_io.cpp
     write_dos_pw.cpp
     nscf_band.cpp
     write_istate_info.cpp
@@ -13,7 +14,7 @@ list(APPEND objects
     print_info.cpp
     read_cube.cpp
     read_rho.cpp
-    read_rhog.cpp
+    rhog_io.cpp
     read_exit_file.cpp
     read_wfc_pw.cpp
     restart.cpp

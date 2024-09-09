@@ -1515,17 +1515,17 @@ These variables are used to control the output of properties.
 
 - **Type**: Integer \[Integer\](optional)
 - **Description**: 
-  
   The first integer controls whether to output the charge density on real space grids:
   - 1. Output the charge density (in Bohr^-3) on real space grids into the density files in the folder `OUT.${suffix}`. The files are named as:
     - nspin = 1: SPIN1_CHG.cube;
     - nspin = 2: SPIN1_CHG.cube, and SPIN2_CHG.cube;
     - nspin = 4: SPIN1_CHG.cube, SPIN2_CHG.cube, SPIN3_CHG.cube, and SPIN4_CHG.cube.
-  - 2. On top of 1, also output the initial charge density. The files are named as:
+  - 2: On top of 1, also output the initial charge density. The files are named as:
     - nspin = 1: SPIN1_CHG_INI.cube
     - nspin = 2: SPIN1_CHG_INI.cube, and SPIN2_CHG_INI.cube;
     - nspin = 4: SPIN1_CHG_INI.cube, SPIN2_CHG_INI.cube, SPIN3_CHG_INI.cube, and SPIN4_CHG_INI.cube.
-  
+  - -1: disable the charge density auto-back-up file `{suffix}-CHARGE-DENSITY.restart`, useful for large systems.
+    
   The second integer controls the precision of the charge density output, if not given, will use `3` as default. For purpose restarting from this file and other high-precision involved calculation, recommend to use `10`.
 
   ---
@@ -2657,6 +2657,27 @@ These variables are used to control molecular dynamics calculations. For more in
 - **Type**: String
 - **Description**: The filename of DP potential files, see [md.md](../md.md#dpmd) in detail.
 - **Default**: graph.pb
+
+### dp_rescaling
+
+- **Type**: Real
+- **Availability**: [esolver_type](#esolver_type) = `dp`.
+- **Description**: Rescaling factor to use a temperature-dependent DP. Energy, stress and force calculated by DP will be multiplied by this factor.
+- **Default**: 1.0
+
+### dp_fparam
+
+- **Type**: Real
+- **Availability**: [esolver_type](#esolver_type) = `dp`.
+- **Description**: The frame parameter for dp potential. The array size is dim_fparam, then all frames are assumed to be provided with the same fparam.
+- **Default**: {}
+
+### dp_aparam
+
+- **Type**: Real
+- **Availability**: [esolver_type](#esolver_type) = `dp`.
+- **Description**: The atomic parameter for dp potential. The array size can be (1) natoms x dim_aparam, then all frames are assumed to be provided with the same aparam; (2) dim_aparam, then all frames and atoms are assumed to be provided with the same aparam.
+- **Default**: {}
 
 ### msst_direction
 

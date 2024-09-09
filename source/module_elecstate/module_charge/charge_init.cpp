@@ -3,6 +3,7 @@
 #include "charge.h"
 #include "module_base/global_function.h"
 #include "module_base/global_variable.h"
+#include "module_parameter/parameter.h"
 #include "module_base/libm/libm.h"
 #include "module_base/math_integral.h"
 #include "module_base/math_sphbes.h"
@@ -32,7 +33,7 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
         // try to read charge from binary file first, which is the same as QE
         // liuyu 2023-12-05
         std::stringstream binary;
-        binary << GlobalV::global_readin_dir << "charge-density.dat";
+        binary << GlobalV::global_readin_dir << PARAM.inp.suffix + "-CHARGE-DENSITY.restart";
         if (ModuleIO::read_rhog(binary.str(), rhopw, rhog))
         {
             GlobalV::ofs_running << " Read in the charge density: " << binary.str() << std::endl;
@@ -53,7 +54,7 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
                         &(GlobalC::Pgrid),
 #endif
                         GlobalV::MY_RANK,
-                        GlobalV::ESOLVER_TYPE,
+                        PARAM.inp.esolver_type,
                         GlobalV::RANK_IN_STOGROUP,
                         is,
                         GlobalV::ofs_running,
@@ -128,7 +129,7 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
                             &(GlobalC::Pgrid),
 #endif
                             GlobalV::MY_RANK,
-                            GlobalV::ESOLVER_TYPE,
+                            PARAM.inp.esolver_type,
                             GlobalV::RANK_IN_STOGROUP,
                             is,
                             GlobalV::ofs_running,
@@ -150,13 +151,12 @@ void Charge::init_rho(elecstate::efermi& eferm_iout, const ModuleBase::ComplexMa
     }
     if (read_error)
     {
-        std::cout << " WARNING: Failed to read charge density from file. Possible reasons: " << std::endl;
-        std::cout << " - not found: The default directory of SPIN1_CHG.cube is OUT.suffix, \n"
-            "or you must set read_file_dir to a specific directory. " << std::endl;
-        std::cout << " - parameter mismatch: check the previous warning." << std::endl;
+        const std::string warn_msg = " WARNING: \"init_chg\" is enabled but ABACUS failed to read charge density from file.\n"
+                                     " Please check if there is SPINX_CHG.cube (X=1,...) or {suffix}-CHARGE-DENSITY.restart in the directory.\n";
+        std::cout << std::endl << warn_msg;
         if (GlobalV::init_chg == "auto")
         {
-            std::cout << " Use atomic initialization instead." << std::endl;
+            std::cout << " Charge::init_rho: use atomic initialization instead." << std::endl << std::endl;
         }
         else if (GlobalV::init_chg == "file")
         {
