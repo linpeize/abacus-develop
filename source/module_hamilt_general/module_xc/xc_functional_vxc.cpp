@@ -7,6 +7,7 @@
 #include "xc_functional.h"
 #include "module_base/parallel_reduce.h"
 #include "module_base/timer.h"
+#include "module_parameter/parameter.h"
 
 #ifdef USE_LIBXC
 #include "xc_functional_libxc.h"
@@ -51,7 +52,8 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
         {
             // total electron charge density
             double rhox = chr->rho[0][ir] + chr->rho_core[ir];
-            if(GlobalV::use_paw && rhox < 1e-14) rhox = 1e-14;
+            if(PARAM.inp.use_paw && rhox < 1e-14) { rhox = 1e-14;
+}
             double arhox = std::abs(rhox);
             if (arhox > vanishing_charge)
             {

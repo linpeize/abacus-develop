@@ -143,7 +143,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
     }
 
     //! atomic forces from integration (4 terms)
-    this->integral_part(GlobalV::GAMMA_ONLY_LOCAL,
+    this->integral_part(PARAM.globalv.gamma_only_local,
                         isforce,
                         isstress,
                         fsr,
@@ -217,7 +217,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 
     //! atomic forces from implicit solvation model
     ModuleBase::matrix fsol;
-    if (GlobalV::imp_sol && isforce)
+    if (PARAM.inp.imp_sol && isforce)
     {
         fsol.create(nat, 3);
         GlobalC::solvent_model.cal_force_sol(GlobalC::ucell, rhopw, fsol);
@@ -227,7 +227,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
     ModuleBase::matrix force_dftu;
     ModuleBase::matrix stress_dftu;
 
-    if (GlobalV::dft_plus_u) // Quxin add for DFT+U on 20201029
+    if (PARAM.inp.dft_plus_u) // Quxin add for DFT+U on 20201029
     {
         if (isforce)
         {
@@ -237,7 +237,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
         {
             stress_dftu.create(3, 3);
         }
-        if (GlobalV::dft_plus_u == 2)
+        if (PARAM.inp.dft_plus_u == 2)
         {
             GlobalC::dftu.force_stress(pelec,
                                        pv,
@@ -260,7 +260,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
         }
     }
 
-    if (!GlobalV::GAMMA_ONLY_LOCAL)
+    if (!PARAM.globalv.gamma_only_local)
     {
         this->flk.finish_ftable(fsr);
     }
@@ -320,7 +320,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                                + fscc(iat, i);   // self consistent corretion force (pw)
 
                 // Force contribution from DFT+U, Quxin add on 20201029
-                if (GlobalV::dft_plus_u)
+                if (PARAM.inp.dft_plus_u)
                 {
                     fcs(iat, i) += force_dftu(iat, i);
                 }
@@ -352,7 +352,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                     fcs(iat, i) += fgate(iat, i);
                 }
                 // implicit solvation model
-                if (GlobalV::imp_sol)
+                if (PARAM.inp.imp_sol)
                 {
                     fcs(iat, i) += fsol(iat, i);
                 }
@@ -376,7 +376,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
             }
 
             // xiaohui add "OUT_LEVEL", 2015-09-16
-            if (GlobalV::OUT_LEVEL != "m")
+            if (PARAM.inp.out_level != "m")
             {
                 GlobalV::ofs_running << " correction force for each atom along direction " << i + 1 << " is "
                                      << sum / nat << std::endl;
@@ -414,7 +414,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 
                 if (!GlobalV::deepks_equiv) // training with force label not supported by equivariant version now
                 {
-                    if (GlobalV::GAMMA_ONLY_LOCAL)
+                    if (PARAM.globalv.gamma_only_local)
                     {
                         const std::vector<std::vector<double>>& dm_gamma
                             = dynamic_cast<const elecstate::ElecStateLCAO<double>*>(pelec)->get_DM()->get_DMK_vector();
@@ -522,7 +522,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                 ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "GATEFIELD     FORCE", fgate, false);
                 // this->print_force("GATEFIELD     FORCE",fgate,1,ry);
             }
-            if (GlobalV::imp_sol)
+            if (PARAM.inp.imp_sol)
             {
                 ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "IMP_SOL     FORCE", fsol, false);
                 // this->print_force("IMP_SOL     FORCE",fsol,1,ry);
@@ -532,7 +532,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                 ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "VDW        FORCE", force_vdw, false);
                 // this->print_force("VDW        FORCE",force_vdw,1,ry);
             }
-            if (GlobalV::dft_plus_u)
+            if (PARAM.inp.dft_plus_u)
             {
                 ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "DFT+U      FORCE", force_dftu, false);
             }
@@ -597,7 +597,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                     scs(i, j) += stress_vdw(i, j);
                 }
                 // DFT plus U stress from qux
-                if (GlobalV::dft_plus_u)
+                if (PARAM.inp.dft_plus_u)
                 {
                     scs(i, j) += stress_dftu(i, j);
                 }
@@ -708,7 +708,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
             {
                 ModuleIO::print_stress("VDW      STRESS", sigmaxc, GlobalV::TEST_STRESS, ry);
             }
-            if (GlobalV::dft_plus_u)
+            if (PARAM.inp.dft_plus_u)
             {
                 ModuleIO::print_stress("DFTU     STRESS", stress_dftu, GlobalV::TEST_STRESS, ry);
             }
@@ -727,7 +727,6 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
         {
             scs(i, i) -= external_stress[i] / unit_transform;
         }
-        GlobalV::PRESSURE = (scs(0, 0) + scs(1, 1) + scs(2, 2)) / 3;
     } // end of stress calculation
 
     ModuleBase::timer::tick("Force_Stress_LCAO", "getForceStress");
