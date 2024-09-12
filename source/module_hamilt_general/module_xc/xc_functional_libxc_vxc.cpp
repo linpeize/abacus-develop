@@ -19,8 +19,8 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
         const double tpiba,
         const Charge* const chr)
 {
-    ModuleBase::TITLE("XC_Functional","v_xc_libxc");
-    ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
+    ModuleBase::TITLE("XC_Functional_Libxc","v_xc_libxc");
+    ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_libxc");
 
     const int nspin =
         (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
@@ -135,7 +135,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
 
     XC_Functional_Libxc::finish_func(funcs);
 
-    ModuleBase::timer::tick("XC_Functional","v_xc_libxc");
+    ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_libxc");
     return std::make_tuple( etxc, vtxc, std::move(v) );
 }
 
@@ -159,8 +159,8 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
     const double tpiba,
     const Charge* const chr)
 {
-    ModuleBase::TITLE("XC_Functional","v_xc_meta");
-    ModuleBase::timer::tick("XC_Functional","v_xc_meta");
+    ModuleBase::TITLE("XC_Functional_Libxc","v_xc_meta");
+    ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_meta");
 
     double e2 = 2.0;
 
@@ -386,7 +386,7 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
 
     XC_Functional_Libxc::finish_func(funcs);
 
-    ModuleBase::timer::tick("XC_Functional","v_xc_meta");
+    ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_meta");
     return std::make_tuple( etxc, vtxc, std::move(v), std::move(vofk) );
 }
 
