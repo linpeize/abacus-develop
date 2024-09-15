@@ -108,14 +108,13 @@ class UcellTest : public ::testing::Test {
     void SetUp() {
         ofs.open("running.log");
         PARAM.input.relax_new = utp.relax_new;
-        GlobalV::global_out_dir = "./";
+        PARAM.sys.global_out_dir = "./";
         ucell = utp.SetUcellInfo();
         GlobalV::LSPINORB = false;
         pp_dir = "./support/";
         PARAM.input.pseudo_rcut = 15.0;
         PARAM.input.dft_functional = "default";
-        GlobalV::test_unitcell = 1;
-        GlobalV::test_pseudo_cell = 1;
+        PARAM.input.test_pseudo_cell = true;
         GlobalV::NSPIN = 1;
         PARAM.input.basis_type = "pw";
     }

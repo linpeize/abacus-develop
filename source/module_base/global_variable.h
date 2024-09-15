@@ -54,8 +54,6 @@ extern double DQ; // 19 mohan add 2009-09-10
 extern int NQX;   // 20 mohan add 2009-09-10
 extern int NQXQ;  // liuyu add 2023-10-03
 
-extern bool GAMMA_ONLY_PW;    // mohan add 2012-06-05
-
 
 //========================================================================
 // EXPLAIN : Parallel information
@@ -114,12 +112,6 @@ extern std::string global_kpoint_card;
 
 // extern std::string global_pseudo_type; // mohan add 2013-05-20 (xiaohui add
 // 2013-06-23)
-extern std::string global_out_dir;
-extern std::string global_readin_dir;  // zhengdy modified
-extern std::string global_stru_dir;    // liuyu add 2022-05-24 for MD STRU
-extern std::string global_matrix_dir;  // liuyu add 2022-09-19 for HS matrix outpu, jiyy
-                                       // modified 2023-01-23 for R matrix output
-
 extern std::ofstream ofs_running;
 extern std::ofstream ofs_warning;
 extern std::ofstream ofs_info;
@@ -128,40 +120,16 @@ extern std::ofstream ofs_device;
 //==========================================================
 // EXPLAIN : test level for each class
 //==========================================================
-extern int test_input;
-extern int test_winput;
-extern int test_kpoint;
-extern int test_atom;
-extern int test_unitcell;
-extern int test_symmetry;
 
-extern int test_pw;
-
-extern int test_wf;
-extern int test_charge;
-extern int test_potential;
-extern int test_energy;
 //==========================================================
 // src_onscaling
 //==========================================================
-extern int test_atom_input;
-extern int test_grid;
-extern int test_grid_driver;
-extern int test_overlap;
-extern int TEST_FORCE;  // mohan add 2011-03-18
-extern int TEST_STRESS; // zhengdy add 2018-05-16
-extern int test_gridt;  // mohan add 2011-03-17
 //==========================================================
 // src_pseudo
 //==========================================================
-extern int test_pseudo_cell;
-extern int test_pp;
-extern int test_kmesh;
-extern int test_relax_method;
 //==========================================================
 // src_tools
 //==========================================================
-extern int test_deconstructor;
 
 
 extern bool deepks_out_labels; // (need libnpy) prints energy and force labels

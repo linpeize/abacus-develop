@@ -62,7 +62,7 @@ void Structure_Factor::setup_structure_factor(UnitCell* Ucell, const ModulePW::P
     ModuleBase::Memory::record("SF::strucFac", sizeof(std::complex<double>) * Ucell->ntype*rho_basis->npw);
 
 //	std::string outstr;
-//	outstr = GlobalV::global_out_dir + "strucFac.dat"; 
+//	outstr = PARAM.globalv.global_out_dir + "strucFac.dat"; 
 //	std::ofstream ofs( outstr.c_str() ) ;
     bool usebspline;
     if(nbspline > 0) {   usebspline = true;
@@ -110,10 +110,6 @@ void Structure_Factor::setup_structure_factor(UnitCell* Ucell, const ModulePW::P
     int inat = 0;
     for (i = 0; i < Ucell->ntype; i++)
     {
-        if (GlobalV::test_pw > 1)
-        {
-            ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"eigts",i);
-        }
         for (j = 0; j < Ucell->atoms[i].na;j++)
         {
             gtau = Ucell->G * Ucell->atoms[i].tau[j];  //HLX: fixed on 10/13/2006

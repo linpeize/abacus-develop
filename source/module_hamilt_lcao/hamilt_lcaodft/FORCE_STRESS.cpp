@@ -1,5 +1,6 @@
 #include "FORCE_STRESS.h"
 
+#include "module_parameter/parameter.h"
 #include "module_hamilt_lcao/module_dftu/dftu.h" //Quxin add for DFT+U on 20201029
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
 #include "module_io/output_log.h"
@@ -37,6 +38,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                                           Gint_Gamma& gint_gamma, // mohan add 2024-04-01
                                           Gint_k& gint_k,         // mohan add 2024-04-01
                                           const TwoCenterBundle& two_center_bundle,
+                                          const LCAO_Orbitals& orb,
                                           ModuleBase::matrix& fcs,
                                           ModuleBase::matrix& scs,
                                           const Structure_Factor& sf,
@@ -163,6 +165,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                         gint_gamma,
                         gint_k,
                         two_center_bundle,
+                        orb,
                         pv,
                         kv);
 
@@ -254,6 +257,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                                                                    GlobalC::ucell,
                                                                    &GlobalC::GridD,
                                                                    two_center_bundle.overlap_orb_onsite.get(),
+                                                                   orb.cutoffs(),
                                                                    &GlobalC::dftu);
 
             tmp_dftu.cal_force_stress(isforce, isstress, force_dftu, stress_dftu);
@@ -398,7 +402,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
         // DeePKS force
         if (GlobalV::deepks_out_labels) // not parallelized yet
         {
-            const std::string file_ftot = GlobalV::global_out_dir + "deepks_ftot.npy";
+            const std::string file_ftot = PARAM.globalv.global_out_dir + "deepks_ftot.npy";
             LCAO_deepks_io::save_npy_f(fcs, 
                                        file_ftot, 
                                        GlobalC::ucell.nat, 
@@ -406,7 +410,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 
             if (GlobalV::deepks_scf)
             {
-                const std::string file_fbase = GlobalV::global_out_dir + "deepks_fbase.npy";
+                const std::string file_fbase = PARAM.globalv.global_out_dir + "deepks_fbase.npy";
                 LCAO_deepks_io::save_npy_f(fcs - GlobalC::ld.F_delta, 
                                            file_fbase, 
                                            GlobalC::ucell.nat, 
@@ -418,7 +422,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                     {
                         const std::vector<std::vector<double>>& dm_gamma
                             = dynamic_cast<const elecstate::ElecStateLCAO<double>*>(pelec)->get_DM()->get_DMK_vector();
-                        GlobalC::ld.cal_gdmx(dm_gamma[0], GlobalC::ucell, GlobalC::ORB, GlobalC::GridD, isstress);
+                        GlobalC::ld.cal_gdmx(dm_gamma[0], GlobalC::ucell, orb, GlobalC::GridD, isstress);
                     }
                     else
                     {
@@ -429,7 +433,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 
                         GlobalC::ld.cal_gdmx_k(dm_k,
                                                GlobalC::ucell,
-                                               GlobalC::ORB,
+                                               orb,
                                                GlobalC::GridD,
                                                kv.get_nks(),
                                                kv.kvec_d,
@@ -449,13 +453,13 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                     LCAO_deepks_io::save_npy_gvx(GlobalC::ucell.nat,
                       GlobalC::ld.des_per_atom,
                       GlobalC::ld.gvx_tensor,
-                      GlobalV::global_out_dir,
+                      PARAM.globalv.global_out_dir,
                       GlobalV::MY_RANK);
                 }
             }
             else
             {
-                const std::string file_fbase = GlobalV::global_out_dir + "deepks_fbase.npy";
+                const std::string file_fbase = PARAM.globalv.global_out_dir + "deepks_fbase.npy";
                 LCAO_deepks_io::save_npy_f(fcs, 
                   file_fbase, 
                   GlobalC::ucell.nat,
@@ -489,8 +493,8 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
             //-----------------------------
             // this->print_force("OVERLAP    FORCE",foverlap,1,ry);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "OVERLAP    FORCE", foverlap, false);
-            //  this->print_force("TVNL_DPHI  force",ftvnl_dphi,GlobalV::TEST_FORCE);
-            //  this->print_force("VNL_DBETA  force",fvnl_dbeta,GlobalV::TEST_FORCE);
+            //  this->print_force("TVNL_DPHI  force",ftvnl_dphi,PARAM.inp.test_force);
+            //  this->print_force("VNL_DBETA  force",fvnl_dbeta,PARAM.inp.test_force);
             // this->print_force("T_VNL      FORCE",ftvnl,1,ry);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "T_VNL      FORCE", ftvnl, false);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "VL_dPHI    FORCE", fvl_dphi, false);
@@ -498,7 +502,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
             // this->print_force("VL_dVL     FORCE",fvl_dvl,1,ry);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "VL_dVL     FORCE", fvl_dvl, false);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "EWALD      FORCE", fewalds, false);
-            // 	this->print_force("VLOCAL     FORCE",fvlocal,GlobalV::TEST_FORCE);
+            // 	this->print_force("VLOCAL     FORCE",fvlocal,PARAM.inp.test_force);
             // this->print_force("EWALD      FORCE",fewalds,1,ry);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NLCC       FORCE", fcc, false);
             ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "SCC        FORCE", fscc, false);
@@ -618,7 +622,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
 #ifdef __DEEPKS
         if (GlobalV::deepks_out_labels) // not parallelized yet
         {
-            const std::string file_s = GlobalV::global_out_dir + "deepks_sbase.npy";
+            const std::string file_s = PARAM.globalv.global_out_dir + "deepks_sbase.npy";
             LCAO_deepks_io::save_npy_s(scs,
                                       file_s,
                                       GlobalC::ucell.omega,
@@ -640,7 +644,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
         }
         if (GlobalV::deepks_out_labels) // not parallelized yet
         {
-			const std::string file_s = GlobalV::global_out_dir + "deepks_stot.npy";
+			const std::string file_s = PARAM.globalv.global_out_dir + "deepks_stot.npy";
 			LCAO_deepks_io::save_npy_s(
 					scs,
 					file_s,
@@ -659,7 +663,7 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
                       GlobalC::ucell.nat, 
                       GlobalC::ld.des_per_atom,
                       GlobalC::ld.gvepsl_tensor,
-                      GlobalV::global_out_dir,
+                      PARAM.globalv.global_out_dir,
                       GlobalV::MY_RANK); //  unitless, grad_vepsl
                 }
             }
@@ -689,30 +693,30 @@ void Force_Stress_LCAO<T>::getForceStress(const bool isforce,
             GlobalV::ofs_running << "\n PARTS OF STRESS: " << std::endl;
             GlobalV::ofs_running << std::setiosflags(std::ios::showpos);
             GlobalV::ofs_running << std::setiosflags(std::ios::fixed) << std::setprecision(10) << std::endl;
-            ModuleIO::print_stress("OVERLAP  STRESS", soverlap, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("OVERLAP  STRESS", soverlap, PARAM.inp.test_stress, ry);
             // test
-            ModuleIO::print_stress("T        STRESS", stvnl_dphi, GlobalV::TEST_STRESS, ry);
-            ModuleIO::print_stress("VNL      STRESS", svnl_dbeta, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("T        STRESS", stvnl_dphi, PARAM.inp.test_stress, ry);
+            ModuleIO::print_stress("VNL      STRESS", svnl_dbeta, PARAM.inp.test_stress, ry);
 
-            ModuleIO::print_stress("T_VNL    STRESS", stvnl, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("T_VNL    STRESS", stvnl, PARAM.inp.test_stress, ry);
 
-            ModuleIO::print_stress("VL_dPHI  STRESS", svl_dphi, GlobalV::TEST_STRESS, ry);
-            ModuleIO::print_stress("VL_dVL   STRESS", sigmadvl, GlobalV::TEST_STRESS, ry);
-            ModuleIO::print_stress("HAR      STRESS", sigmahar, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("VL_dPHI  STRESS", svl_dphi, PARAM.inp.test_stress, ry);
+            ModuleIO::print_stress("VL_dVL   STRESS", sigmadvl, PARAM.inp.test_stress, ry);
+            ModuleIO::print_stress("HAR      STRESS", sigmahar, PARAM.inp.test_stress, ry);
 
-            ModuleIO::print_stress("EWALD    STRESS", sigmaewa, GlobalV::TEST_STRESS, ry);
-            ModuleIO::print_stress("cc       STRESS", sigmacc, GlobalV::TEST_STRESS, ry);
-            //		ModuleIO::print_stress("NLCC       STRESS",sigmacc,GlobalV::TEST_STRESS,ry);
-            ModuleIO::print_stress("XC       STRESS", sigmaxc, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("EWALD    STRESS", sigmaewa, PARAM.inp.test_stress, ry);
+            ModuleIO::print_stress("cc       STRESS", sigmacc, PARAM.inp.test_stress, ry);
+            //		ModuleIO::print_stress("NLCC       STRESS",sigmacc,PARAM.inp.test_stress,ry);
+            ModuleIO::print_stress("XC       STRESS", sigmaxc, PARAM.inp.test_stress, ry);
             if (vdw_solver != nullptr)
             {
-                ModuleIO::print_stress("VDW      STRESS", sigmaxc, GlobalV::TEST_STRESS, ry);
+                ModuleIO::print_stress("VDW      STRESS", sigmaxc, PARAM.inp.test_stress, ry);
             }
             if (PARAM.inp.dft_plus_u)
             {
-                ModuleIO::print_stress("DFTU     STRESS", stress_dftu, GlobalV::TEST_STRESS, ry);
+                ModuleIO::print_stress("DFTU     STRESS", stress_dftu, PARAM.inp.test_stress, ry);
             }
-            ModuleIO::print_stress("TOTAL    STRESS", scs, GlobalV::TEST_STRESS, ry);
+            ModuleIO::print_stress("TOTAL    STRESS", scs, PARAM.inp.test_stress, ry);
 
         } // end of test
         GlobalV::ofs_running << std::setiosflags(std::ios::left);
@@ -790,6 +794,7 @@ void Force_Stress_LCAO<double>::integral_part(const bool isGammaOnly,
                                               Gint_Gamma& gint_gamma, // mohan add 2024-04-01
                                               Gint_k& gint_k,         // mohan add 2024-04-01
                                               const TwoCenterBundle& two_center_bundle,
+                                              const LCAO_Orbitals& orb,
                                               const Parallel_Orbitals& pv,
                                               const K_Vectors& kv)
 {
@@ -813,6 +818,7 @@ void Force_Stress_LCAO<double>::integral_part(const bool isGammaOnly,
 #endif
                gint_gamma,
                two_center_bundle,
+               orb,
                pv);
     return;
 }
@@ -838,6 +844,7 @@ void Force_Stress_LCAO<std::complex<double>>::integral_part(const bool isGammaOn
                                                             Gint_Gamma& gint_gamma,
                                                             Gint_k& gint_k,
                                                             const TwoCenterBundle& two_center_bundle,
+                                                            const LCAO_Orbitals& orb,
                                                             const Parallel_Orbitals& pv,
                                                             const K_Vectors& kv)
 {
@@ -860,6 +867,7 @@ void Force_Stress_LCAO<std::complex<double>>::integral_part(const bool isGammaOn
 #endif
                gint_k,
                two_center_bundle,
+               orb,
                pv,
                &kv,
                this->RA);
