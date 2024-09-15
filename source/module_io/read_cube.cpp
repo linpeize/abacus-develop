@@ -3,44 +3,44 @@
 
 bool ModuleIO::read_cube(
 #ifdef __MPI
-    Parallel_Grid* Pgrid,
+    const Parallel_Grid*const Pgrid,
 #endif
-    int my_rank,
-    std::string esolver_type,
-    int rank_in_stogroup,
-    const int& is,
+    const int my_rank,
+    const std::string esolver_type,
+    const int rank_in_stogroup,
+    const int is,
     std::ofstream& ofs_running,
-    const int& nspin,
+    const int nspin,
     const std::string& fn,
-    double* data,
-    const int& nx,
-    const int& ny,
-    const int& nz,
+    double*const data,
+    const int nx,
+    const int ny,
+    const int nz,
     double& ef,
-    const UnitCell* ucell,
+    const UnitCell*const ucell,
     int& prenspin,
-    const bool& warning_flag)
+    const bool warning_flag)
 {
     ModuleBase::TITLE("ModuleIO","read_cube");
     std::ifstream ifs(fn.c_str());
-    if (!ifs) 
-	{
-		std::string tmp_warning_info = "!!! Couldn't find the charge file of ";
-		tmp_warning_info += fn;
-		ofs_running << tmp_warning_info << std::endl;
-		return false;
-	}
-	else
-	{
-    	ofs_running << " Find the file, try to read charge from file." << std::endl;
-	}
+    if (!ifs)
+    {
+        std::string tmp_warning_info = "!!! Couldn't find the charge file of ";
+        tmp_warning_info += fn;
+        ofs_running << tmp_warning_info << std::endl;
+        return false;
+    }
+    else
+    {
+        ofs_running << " Find the file, try to read charge from file." << std::endl;
+    }
 
-	bool quit=false;
+    bool quit=false;
 
-	ifs.ignore(300, '\n'); // skip the header
+    ifs.ignore(300, '\n'); // skip the header
 
-	if(nspin != 4)
-	{
+    if(nspin != 4)
+    {
         int v_in;
         ifs >> v_in;
         if (v_in != nspin)
@@ -49,16 +49,16 @@ bool ModuleIO::read_cube(
             return false;
         }
     }
-	else
-	{
-		ifs >> prenspin;
-	}
-	ifs.ignore(150, ')');
+    else
+    {
+        ifs >> prenspin;
+    }
+    ifs.ignore(150, ')');
 
-	ifs >> ef;
-	ofs_running << " read in fermi energy = " << ef << std::endl;
+    ifs >> ef;
+    ofs_running << " read in fermi energy = " << ef << std::endl;
 
-	ifs.ignore(150, '\n');
+    ifs.ignore(150, '\n');
 
     ModuleBase::CHECK_INT(ifs, ucell->nat);
     ifs.ignore(150, '\n');
@@ -93,8 +93,6 @@ bool ModuleIO::read_cube(
         ifs >> temp >> temp >> temp;
     }
 
-    const bool same = (nx == nx_read && ny == ny_read && nz == nz_read) ? true : false;
-
     for (int it = 0; it < ucell->ntype; it++)
     {
         for (int ia = 0; ia < ucell->atoms[it].na; ia++)
@@ -113,6 +111,40 @@ bool ModuleIO::read_cube(
             }
         }
     }
+
+#ifdef __MPI
+    ModuleIO::read_cube_core(ifs, Pgrid, my_rank, esolver_type, rank_in_stogroup, data, nx, ny, nz, nx_read, ny_read, nz_read);
+#else
+    ModuleIO::read_cube_core(ifs, my_rank, esolver_type, rank_in_stogroup, is, ofs_running, data, nx, ny, nz, nx_read, ny_read, nz_read);
+#endif
+
+    if (my_rank == 0 || (esolver_type == "sdft" && rank_in_stogroup == 0))
+        ifs.close();
+    return true;
+}
+
+void ModuleIO::read_cube_core(
+    std::ifstream &ifs,
+#ifdef __MPI
+    const Parallel_Grid*const Pgrid,
+#endif
+    const int my_rank,
+    const std::string esolver_type,
+    const int rank_in_stogroup,
+#ifdef __MPI
+#else
+    const int is,
+    std::ofstream& ofs_running,
+#endif
+    double*const data,
+    const int nx,
+    const int ny,
+    const int nz,
+    const int nx_read,
+    const int ny_read,
+    const int nz_read)
+{
+    const bool same = (nx == nx_read && ny == ny_read && nz == nz_read) ? true : false;
 
 #ifdef __MPI
     const int nxy = nx * ny;
@@ -190,10 +222,6 @@ bool ModuleIO::read_cube(
         ModuleIO::trilinear_interpolate(ifs, nx_read, ny_read, nz_read, nx, ny, nz, data);
     }
 #endif
-
-    if (my_rank == 0 || (esolver_type == "sdft" && rank_in_stogroup == 0))
-        ifs.close();
-    return true;
 }
 
 void ModuleIO::trilinear_interpolate(std::ifstream& ifs,

@@ -8,45 +8,79 @@
 
 namespace ModuleIO
 {
-bool read_cube(
+extern bool read_cube(
 #ifdef __MPI
-    Parallel_Grid* Pgrid,
+    const Parallel_Grid*const Pgrid,
 #endif
-    int my_rank,
-    std::string esolver_type,
-    int rank_in_stogroup,
-    const int& is,
+    const int my_rank,
+    const std::string esolver_type,
+    const int rank_in_stogroup,
+    const int is,
     std::ofstream& ofs_running,
-    const int& nspin,
+    const int nspin,
     const std::string& fn,
-    double* data,
-    const int& nx,
-    const int& ny,
-    const int& nz,
+    double*const data,
+    const int nx,
+    const int ny,
+    const int nz,
     double& ef,
-    const UnitCell* ucell,
+    const UnitCell*const ucell,
     int& prenspin,
-    const bool& warning_flag = true);
+    const bool warning_flag = true);
 
-void write_cube(
+extern void read_cube_core(
+    std::ifstream &ifs,
 #ifdef __MPI
-    const int& bz,
-    const int& nbz,
-    const int& nplane,
-    const int& startz_current,
+    const Parallel_Grid*const Pgrid,
 #endif
-    const double* data,
-    const int& is,
-    const int& nspin,
-    const int& iter,
+    const int my_rank,
+    const std::string esolver_type,
+    const int rank_in_stogroup,
+#ifdef __MPI
+#else
+    const int is,
+    std::ofstream& ofs_running,
+#endif
+    double*const data,
+    const int nx,
+    const int ny,
+    const int nz,
+    const int nx_read,
+    const int ny_read,
+    const int nz_read);
+
+extern void write_cube(
+#ifdef __MPI
+    const int bz,
+    const int nbz,
+    const int nplane,
+    const int startz_current,
+#endif
+    const double*const data,
+    const int is,
+    const int nspin,
+    const int iter,
     const std::string& fn,
-    const int& nx,
-    const int& ny,
-    const int& nz,
-    const double& ef,
-    const UnitCell* ucell,
-    const int& precision = 11,
-    const int& out_fermi = 1); // mohan add 2007-10-17
+    const int nx,
+    const int ny,
+    const int nz,
+    const double ef,
+    const UnitCell*const ucell,
+    const int precision = 11,
+    const int out_fermi = 1); // mohan add 2007-10-17
+
+extern void write_cube_core(
+    std::ofstream &ofs_cube,
+#ifdef __MPI
+    const int bz,
+    const int nbz,
+    const int nplane,
+    const int startz_current,
+#endif
+    const double*const data,
+    const int nx,
+    const int ny,
+    const int nz);
 
     /**
      * @brief The trilinear interpolation method
@@ -78,7 +112,7 @@ void write_cube(
      * @param nz the dimension of grids along z
      * @param data the interpolated results
      */
-    void trilinear_interpolate(std::ifstream& ifs,
+    extern void trilinear_interpolate(std::ifstream& ifs,
                                const int& nx_read,
                                const int& ny_read,
                                const int& nz_read,

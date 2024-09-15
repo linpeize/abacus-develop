@@ -4,23 +4,23 @@
 
 void ModuleIO::write_cube(
 #ifdef __MPI
-    const int& bz,
-    const int& nbz,
-    const int& nplane,
-    const int& startz_current,
+    const int bz,
+    const int nbz,
+    const int nplane,
+    const int startz_current,
 #endif
-    const double* data,
-    const int& is,
-    const int& nspin,
-    const int& iter,
+    const double*const data,
+    const int is,
+    const int nspin,
+    const int iter,
     const std::string& fn,
-    const int& nx,
-    const int& ny,
-    const int& nz,
-    const double& ef,
-    const UnitCell* ucell,
-    const int& precision,
-    const int& out_fermi)
+    const int nx,
+    const int ny,
+    const int nz,
+    const double ef,
+    const UnitCell*const ucell,
+    const int precision,
+    const int out_fermi)
 {
     ModuleBase::TITLE("ModuleIO", "write_cube");
 
@@ -127,7 +127,43 @@ void ModuleIO::write_cube(
     }
 
 #ifdef __MPI
+    ModuleIO::write_cube_core(ofs_cube, bz, nbz, nplane, startz_current, data, nx, ny, nz);
+#else
+    ModuleIO::write_cube_core(ofs_cube, data, nx, ny, nz);
+#endif
 
+    if (my_rank == 0)
+    {
+        end = time(NULL);
+        ModuleBase::GlobalFunc::OUT_TIME("write_cube", start, end);
+
+        /// for cube file
+        ofs_cube.close();
+    }
+
+    return;
+}
+
+
+void ModuleIO::write_cube_core(
+    std::ofstream &ofs_cube,
+#ifdef __MPI
+    const int bz,
+    const int nbz,
+    const int nplane,
+    const int startz_current,
+#endif
+    const double*const data,
+    const int nx,
+    const int ny,
+    const int nz)
+{
+    ModuleBase::TITLE("ModuleIO", "write_cube_core");
+
+#ifdef __MPI
+
+
+    const int my_rank = GlobalV::MY_RANK;
     const int my_pool = GlobalV::MY_POOL;
     const int rank_in_pool = GlobalV::RANK_IN_POOL;
     const int nproc_in_pool = GlobalV::NPROC_IN_POOL;
@@ -268,15 +304,4 @@ void ModuleIO::write_cube(
         }
     }
 #endif
-
-    if (my_rank == 0)
-    {
-        end = time(NULL);
-        ModuleBase::GlobalFunc::OUT_TIME("write_cube", start, end);
-
-        /// for cube file
-        ofs_cube.close();
-    }
-
-    return;
 }
