@@ -28,27 +28,6 @@ extern bool read_cube(
     int& prenspin,
     const bool warning_flag = true);
 
-extern void read_cube_core(
-    std::ifstream &ifs,
-#ifdef __MPI
-    const Parallel_Grid*const Pgrid,
-#endif
-    const int my_rank,
-    const std::string esolver_type,
-    const int rank_in_stogroup,
-#ifdef __MPI
-#else
-    const int is,
-    std::ofstream& ofs_running,
-#endif
-    double*const data,
-    const int nx,
-    const int ny,
-    const int nz,
-    const int nx_read,
-    const int ny_read,
-    const int nz_read);
-
 extern void write_cube(
 #ifdef __MPI
     const int bz,
@@ -68,6 +47,31 @@ extern void write_cube(
     const UnitCell*const ucell,
     const int precision = 11,
     const int out_fermi = 1); // mohan add 2007-10-17
+
+
+extern void read_cube_core_match(
+    std::ifstream &ifs,
+#ifdef __MPI
+    const Parallel_Grid*const Pgrid,
+    const bool flag_read_rank,
+#endif
+    double*const data,
+    const int nxy,
+    const int nz);
+
+extern void read_cube_core_mismatch(
+    std::ifstream &ifs,
+#ifdef __MPI
+    const Parallel_Grid*const Pgrid,
+    const bool flag_read_rank,
+#endif
+    double*const data,
+    const int nx,
+    const int ny,
+    const int nz,
+    const int nx_read,
+    const int ny_read,
+    const int nz_read);
 
 extern void write_cube_core(
     std::ofstream &ofs_cube,
@@ -120,7 +124,7 @@ extern void write_cube_core(
                                const int& ny,
                                const int& nz,
 #ifdef __MPI
-                               double** data
+                               std::vector<std::vector<double>> &data
 #else
                                double* data
 #endif
