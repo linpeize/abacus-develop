@@ -78,9 +78,9 @@ extern void write_cube_core(
     const int startz_current,
 #endif
     const double*const data,
-    const int nx,
-    const int ny,
-    const int nz);
+    const int nxy,
+    const int nz,
+    const int n_data_newline);
 
     /**
      * @brief The trilinear interpolation method

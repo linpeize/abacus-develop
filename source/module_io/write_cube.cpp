@@ -127,9 +127,9 @@ void ModuleIO::write_cube(
     }
 
 #ifdef __MPI
-    ModuleIO::write_cube_core(ofs_cube, bz, nbz, nplane, startz_current, data, nx, ny, nz);
+    ModuleIO::write_cube_core(ofs_cube, bz, nbz, nplane, startz_current, data, nx*ny, nz, 6);
 #else
-    ModuleIO::write_cube_core(ofs_cube, data, nx, ny, nz);
+    ModuleIO::write_cube_core(ofs_cube, data, nx*ny, nz, 6);
 #endif
 
     if (my_rank == 0)
@@ -154,14 +154,13 @@ void ModuleIO::write_cube_core(
     const int startz_current,
 #endif
     const double*const data,
-    const int nx,
-    const int ny,
-    const int nz)
+    const int nxy,
+    const int nz,
+    const int n_data_newline)
 {
     ModuleBase::TITLE("ModuleIO", "write_cube_core");
 
 #ifdef __MPI
-
 
     const int my_rank = GlobalV::MY_RANK;
     const int my_pool = GlobalV::MY_POOL;
@@ -172,7 +171,7 @@ void ModuleIO::write_cube_core(
     if (my_pool == 0)
     {
         /// for cube file
-        const int nxyz = nx * ny * nz;
+        const int nxyz = nxy * nz;
         std::vector<double> data_cube(nxyz, 0.0);
 
         // num_z: how many planes on processor 'ip'
@@ -212,7 +211,6 @@ void ModuleIO::write_cube_core(
         }
 
         int count = 0;
-        const int nxy = nx * ny;
         std::vector<double> zpiece(nxy, 0.0);
 
         // save the rho one z by one z.
@@ -227,21 +225,21 @@ void ModuleIO::write_cube_core(
             // case 1: the first part of rho in processor 0.
             if (which_ip[iz] == 0 && rank_in_pool == 0)
             {
-                for (int ir = 0; ir < nxy; ir++)
+                for (int ixy = 0; ixy < nxy; ixy++)
                 {
                     // mohan change to rho_save on 2012-02-10
                     // because this can make our next restart calculation lead
                     // to the same scf_thr as the one saved.
-                    zpiece[ir] = data[ir * nplane + iz - startz_current];
+                    zpiece[ixy] = data[ixy * nplane + iz - startz_current];
                 }
             }
             // case 2: > first part rho: send the rho to
             // processor 0.
             else if (which_ip[iz] == rank_in_pool)
             {
-                for (int ir = 0; ir < nxy; ir++)
+                for (int ixy = 0; ixy < nxy; ixy++)
                 {
-                    zpiece[ir] = data[ir * nplane + iz - startz_current];
+                    zpiece[ixy] = data[ixy * nplane + iz - startz_current];
                 }
                 MPI_Send(zpiece.data(), nxy, MPI_DOUBLE, 0, tag, POOL_WORLD);
             }
@@ -256,9 +254,9 @@ void ModuleIO::write_cube_core(
             if (my_rank == 0)
             {
                 /// for cube file
-                for (int ir = 0; ir < nxy; ir++)
+                for (int ixy = 0; ixy < nxy; ixy++)
                 {
-                    data_cube[ir + iz * nxy] = zpiece[ir];
+                    data_cube[ixy * nz + iz] = zpiece[ixy];
                 }
                 /// for cube file
             }
@@ -267,41 +265,35 @@ void ModuleIO::write_cube_core(
         // for cube file
         if (my_rank == 0)
         {
-            for (int ix = 0; ix < nx; ix++)
+            for (int ixy = 0; ixy < nxy; ixy++)
             {
-                for (int iy = 0; iy < ny; iy++)
+                for (int iz = 0; iz < nz; iz++)
                 {
-                    for (int iz = 0; iz < nz; iz++)
+                    ofs_cube << " " << data_cube[ixy * nz + iz];
+                    if ((iz % n_data_newline == n_data_newline-1) && (iz != nz - 1))
                     {
-                        ofs_cube << " " << data_cube[iz * nx * ny + ix * ny + iy];
-                        if (iz % 6 == 5 && iz != nz - 1)
-                        {
-                            ofs_cube << "\n";
-                        }
+                        ofs_cube << "\n";
                     }
-                    ofs_cube << "\n";
                 }
+                ofs_cube << "\n";
             }
         }
         /// for cube file
     }
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    for (int i = 0; i < nx; i++)
+    for (int ixy = 0; ixy < nxy; ixy++)
     {
-        for (int j = 0; j < ny; j++)
+        for (int iz = 0; iz < nz; iz++)
         {
-            for (int k = 0; k < nz; k++)
+            ofs_cube << " " << data[iz * nxy + ixy];
+            // ++count_cube;
+            if ((iz % n_data_newline == n_data_newline-1) && (iz != nz - 1))
             {
-                ofs_cube << " " << data[k * nx * ny + i * ny + j];
-                // ++count_cube;
-                if (k % 6 == 5 && k != nz - 1)
-                {
-                    ofs_cube << "\n";
-                }
+                ofs_cube << "\n";
             }
-            ofs_cube << "\n";
         }
+        ofs_cube << "\n";
     }
 #endif
 }
