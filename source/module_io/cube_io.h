@@ -8,7 +8,7 @@
 
 namespace ModuleIO
 {
-extern bool read_cube(
+bool read_cube(
 #ifdef __MPI
     const Parallel_Grid*const Pgrid,
 #endif
@@ -28,7 +28,7 @@ extern bool read_cube(
     int& prenspin,
     const bool warning_flag = true);
 
-extern void write_cube(
+void write_cube(
 #ifdef __MPI
     const int bz,
     const int nbz,
@@ -49,7 +49,11 @@ extern void write_cube(
     const int out_fermi = 1); // mohan add 2007-10-17
 
 
-extern void read_cube_core_match(
+// when MPI:
+//      read file as order (ixy,iz) to data[ixy*nz+iz]
+// when serial:
+//      read file as order (ixy,iz) to data[iz*nxy+ixy]
+void read_cube_core_match(
     std::ifstream &ifs,
 #ifdef __MPI
     const Parallel_Grid*const Pgrid,
@@ -59,7 +63,7 @@ extern void read_cube_core_match(
     const int nxy,
     const int nz);
 
-extern void read_cube_core_mismatch(
+void read_cube_core_mismatch(
     std::ifstream &ifs,
 #ifdef __MPI
     const Parallel_Grid*const Pgrid,
@@ -73,7 +77,11 @@ extern void read_cube_core_mismatch(
     const int ny_read,
     const int nz_read);
 
-extern void write_cube_core(
+// when MPI:
+//      write data[ixy*nplane+iz] to file as order (ixy,iz)
+// when serial:
+//      write data[iz*nxy+ixy] to file as order (ixy,iz)
+void write_cube_core(
     std::ofstream &ofs_cube,
 #ifdef __MPI
     const int bz,
@@ -116,7 +124,7 @@ extern void write_cube_core(
      * @param nz the dimension of grids along z
      * @param data the interpolated results
      */
-    extern void trilinear_interpolate(std::ifstream& ifs,
+    void trilinear_interpolate(std::ifstream& ifs,
                                const int& nx_read,
                                const int& ny_read,
                                const int& nz_read,
