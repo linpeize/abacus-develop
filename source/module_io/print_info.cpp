@@ -74,47 +74,24 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 		     << std::setw(16) << "KPOINTS"
 		     << std::setw(12) << "PROCESSORS";
 
-		if(PARAM.inp.basis_type=="lcao" || PARAM.inp.basis_type=="lcao_in_pw" || (PARAM.inp.basis_type=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
-		{
-			std::cout << std::setw(12) << "NBASE";
-		}
+		const bool orbinfo = (PARAM.inp.basis_type=="lcao" || PARAM.inp.basis_type=="lcao_in_pw" 
+						  || (PARAM.inp.basis_type=="pw" && PARAM.inp.init_wfc.substr(0, 3) == "nao"));
+		if (orbinfo) { std::cout << std::setw(12) << "NBASE"; }
 
 		std::cout << std::endl;
-		std::cout << " " << std::setw(8) << GlobalV::NSPIN;
+		std::cout << " " << std::setw(8) << PARAM.inp.nspin;
 
-		if(GlobalV::GAMMA_ONLY_LOCAL)
+		if(PARAM.globalv.gamma_only_local)
 		{
-			if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
-			{
-				// red
-				printf( "\e[31m%-16s\e[0m", "Gamma");
-				//printf( "[31m%-16s[0m", "Gamma");
-			}
-			else
-			{
-				std::cout << std::setw(16) << "Gamma";
-			}
+			std::cout << std::setw(16) << "Gamma";
 		}
 		else
 		{
-			if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
-			{
-				// zi
-				printf( "\e[35m%-16d\e[0m", kv.get_nkstot());
-				//printf( "[35m%-16d[0m", kv.get_nkstot());
-			}
-			else
-			{
-				std::cout << std::setw(16) << kv.get_nkstot();
-			}
+			std::cout << std::setw(16) << kv.get_nkstot();
 		}
 
 		std::cout << std::setw(12) << GlobalV::NPROC;
-
-		if(PARAM.inp.basis_type=="lcao" || PARAM.inp.basis_type=="lcao_in_pw" || (PARAM.inp.basis_type=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
-		{
-			std::cout << std::setw(12) << GlobalV::NLOCAL;
-		}
+		if (orbinfo) { std::cout << std::setw(12) << GlobalV::NLOCAL; }
 
 		std::cout << std::endl;
 
@@ -122,24 +99,15 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 
 
 		std::cout << " ---------------------------------------------------------" << std::endl;
-		if(PARAM.inp.basis_type=="lcao")
+		if(PARAM.inp.basis_type == "lcao")
 		{
-			if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
-			{
-				std::string a = "Use Systematically Improvable Atomic bases";
-				printf( " \e[36m%-45s\e[0m\n", a.c_str());
-				//printf( " [36m%-45s[0m\n", a.c_str());
-			}
-			else
-			{
-				std::cout << " Use Systematically Improvable Atomic bases" << std::endl;
-			}
+			std::cout << " Use Systematically Improvable Atomic bases" << std::endl;
 		}
-		else if(PARAM.inp.basis_type=="lcao_in_pw")
+		else if(PARAM.inp.basis_type == "lcao_in_pw")
 		{
 			std::cout << " Expand Atomic bases into plane waves" << std::endl;
 		}
-		else if(PARAM.inp.basis_type=="pw")
+		else if(PARAM.inp.basis_type == "pw")
 		{
 			std::cout << " Use plane wave basis" << std::endl;
 		}
@@ -153,7 +121,7 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 
 		std::cout << " " << std::setw(8) << "ELEMENT";
 
-		if(PARAM.inp.basis_type=="lcao" || PARAM.inp.basis_type=="lcao_in_pw")
+		if (orbinfo)
 		{
 			std::cout << std::setw(16) << "ORBITALS";
 			std::cout << std::setw(12) << "NBASE";
@@ -164,50 +132,26 @@ void Print_Info::setup_parameters(UnitCell &ucell, K_Vectors &kv)
 		std::cout << std::endl;
 
 
-
+		const std::string spectrum = "spdfghi";
 		for(int it=0; it<ucell.ntype; ++it)
 		{
-			if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
-			{
-				printf( "\e[36m%-8s\e[0m", ucell.atoms[it].label.c_str());
-			}
-			else
-			{
-				std::cout << " " << std::setw(8) << ucell.atoms[it].label;
-			}
+			std::cout << " " << std::setw(8) << ucell.atoms[it].label;
 
-			if(PARAM.inp.basis_type=="lcao" || PARAM.inp.basis_type=="lcao_in_pw" || (PARAM.inp.basis_type=="pw" && GlobalV::init_wfc.substr(0, 3) == "nao"))
+			if (orbinfo)
 			{
 				std::stringstream orb;
-
 				int norb = 0;
 
 				for(int L=0; L<=ucell.atoms[it].nwl; ++L)        // pengfei Li 16-2-29
 				{
 					norb += (2*L+1)* ucell.atoms[it].l_nchi[L];
 					orb << ucell.atoms[it].l_nchi[L];
-					if(L==0) orb << "s";
-					else if(L==1) orb << "p";
-					else if(L==2) orb << "d";
-					else if(L==3) orb << "f";
-					else if(L==4) orb << "g";
-					else if(L==5) orb << "h";
-					else if(L==6) orb << "i";
+					orb << spectrum[L];
 				}
 				orb << "-" << ucell.atoms[it].Rcut << "au";
-
-				if(GlobalV::COLOUR && GlobalV::MY_RANK==0)
-				{
-					printf( "\e[36m%-16s\e[0m", orb.str().c_str());
-					printf( "\e[36m%-12d\e[0m", norb);
-					//printf( "[36m%-16s[0m", orb.str().c_str());
-					//printf( "[36m%-12d[0m", norb);
-				}
-				else
-				{
-					std::cout << std::setw(16) << orb.str();
-					std::cout << std::setw(12) << norb;
-				}
+				
+				std::cout << std::setw(16) << orb.str();
+				std::cout << std::setw(12) << norb;
 			}
 
 
@@ -230,7 +174,7 @@ void Print_Info::print_time(time_t &time_start, time_t &time_finish)
 	std::cout << "\n START  Time  : " << ctime(&time_start);
 	std::cout << " FINISH Time  : " << ctime(&time_finish);
 	std::cout << " TOTAL  Time  : " << int(difftime(time_finish, time_start)) << std::endl;
-	std::cout << " SEE INFORMATION IN : " << GlobalV::global_out_dir << std::endl;
+	std::cout << " SEE INFORMATION IN : " << PARAM.globalv.global_out_dir << std::endl;
 
 	GlobalV::ofs_running << "\n Start  Time  : " << ctime(&time_start);
 	GlobalV::ofs_running << " Finish Time  : " << ctime(&time_finish);
@@ -297,7 +241,7 @@ void Print_Info::print_screen(const int &stress_step, const int &force_step, con
 	}
 	else
 	{
-		if(GlobalV::relax_new)
+		if(PARAM.inp.relax_new)
 		{
 			std::cout << " STEP OF RELAXATION : " << unsigned(istep) << std::endl;
 			GlobalV::ofs_running << " STEP OF RELAXATION : " << unsigned(istep) << std::endl;

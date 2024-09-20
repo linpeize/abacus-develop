@@ -71,7 +71,11 @@ void Charge::set_rho_core(ModuleBase::ComplexMatrix const&)
 void Charge::set_rho_core_paw()
 {
 }
-void Charge::init_rho(elecstate::efermi&, ModuleBase::ComplexMatrix const&, const int&, const int&)
+void Charge::init_rho(elecstate::efermi&,
+                      ModuleBase::ComplexMatrix const&,
+                      ModuleSymmetry::Symmetry& symm,
+                      const void*,
+                      const void*)
 {
 }
 void Charge::set_rhopw(ModulePW::PW_Basis*)
@@ -123,14 +127,14 @@ class MockElecState : public ElecState
   public:
     void Set_GlobalV_Default()
     {
-        GlobalV::NSPIN = 1;
+        PARAM.input.nspin = 1;
         GlobalV::nelec = 10.0;
         GlobalV::nupdown = 0.0;
-        GlobalV::TWO_EFERMI = false;
+        PARAM.sys.two_fermi = false;
         GlobalV::NBANDS = 6;
         GlobalV::NLOCAL = 6;
         PARAM.input.esolver_type = "ksdft";
-        GlobalV::LSPINORB = false;
+        PARAM.input.lspinorb = false;
         PARAM.input.basis_type = "pw";
         GlobalV::KPAR = 1;
         GlobalV::NPROC_IN_POOL = 1;
@@ -158,7 +162,7 @@ using ElecStateDeathTest = ElecStateTest;
 
 TEST_F(ElecStateTest, InitNelecSpin)
 {
-    GlobalV::NSPIN = 2;
+    PARAM.input.nspin = 2;
     elecstate->init_nelec_spin();
     EXPECT_EQ(elecstate->nelec_spin[0], 5.0);
     EXPECT_EQ(elecstate->nelec_spin[1], 5.0);
@@ -172,7 +176,7 @@ TEST_F(ElecStateTest, Constructor)
     elecstate::ElecState* elecstate_new = new elecstate::ElecState(charge, rhopw, bigpw);
     EXPECT_EQ(elecstate_new->charge, charge);
     EXPECT_EQ(elecstate_new->bigpw, bigpw);
-    EXPECT_EQ(elecstate_new->eferm.two_efermi, GlobalV::TWO_EFERMI);
+    EXPECT_EQ(elecstate_new->eferm.two_efermi, PARAM.sys.two_fermi);
     delete elecstate_new;
     delete bigpw;
     delete rhopw;
@@ -194,7 +198,7 @@ TEST_F(ElecStateTest, CalNbandsFractionElec)
 
 TEST_F(ElecStateTest, CalNbandsSOC)
 {
-    GlobalV::LSPINORB = true;
+    PARAM.input.lspinorb = true;
     GlobalV::NBANDS = 0;
     elecstate->cal_nbands();
     EXPECT_EQ(GlobalV::NBANDS, 20);
@@ -233,7 +237,7 @@ TEST_F(ElecStateDeathTest, CalNbandsWarning1)
 
 TEST_F(ElecStateDeathTest, CalNbandsWarning2)
 {
-    GlobalV::NSPIN = 2;
+    PARAM.input.nspin = 2;
     GlobalV::nupdown = 4.0;
     elecstate->init_nelec_spin();
     testing::internal::CaptureStdout();
@@ -244,7 +248,7 @@ TEST_F(ElecStateDeathTest, CalNbandsWarning2)
 
 TEST_F(ElecStateDeathTest, CalNbandsWarning3)
 {
-    GlobalV::NSPIN = 2;
+    PARAM.input.nspin = 2;
     GlobalV::nupdown = -4.0;
     elecstate->init_nelec_spin();
     testing::internal::CaptureStdout();
@@ -255,7 +259,7 @@ TEST_F(ElecStateDeathTest, CalNbandsWarning3)
 
 TEST_F(ElecStateTest, CalNbandsSpin1)
 {
-    GlobalV::NSPIN = 1;
+    PARAM.input.nspin = 1;
     GlobalV::NBANDS = 0;
     elecstate->cal_nbands();
     EXPECT_EQ(GlobalV::NBANDS, 15);
@@ -263,7 +267,7 @@ TEST_F(ElecStateTest, CalNbandsSpin1)
 
 TEST_F(ElecStateTest, CalNbandsSpin1LCAO)
 {
-    GlobalV::NSPIN = 1;
+    PARAM.input.nspin = 1;
     GlobalV::NBANDS = 0;
     PARAM.input.basis_type = "lcao";
     elecstate->cal_nbands();
@@ -272,7 +276,7 @@ TEST_F(ElecStateTest, CalNbandsSpin1LCAO)
 
 TEST_F(ElecStateTest, CalNbandsSpin4)
 {
-    GlobalV::NSPIN = 4;
+    PARAM.input.nspin = 4;
     GlobalV::NBANDS = 0;
     elecstate->cal_nbands();
     EXPECT_EQ(GlobalV::NBANDS, 30);
@@ -280,7 +284,7 @@ TEST_F(ElecStateTest, CalNbandsSpin4)
 
 TEST_F(ElecStateTest, CalNbandsSpin4LCAO)
 {
-    GlobalV::NSPIN = 4;
+    PARAM.input.nspin = 4;
     GlobalV::NBANDS = 0;
     PARAM.input.basis_type = "lcao";
     elecstate->cal_nbands();
@@ -289,7 +293,7 @@ TEST_F(ElecStateTest, CalNbandsSpin4LCAO)
 
 TEST_F(ElecStateTest, CalNbandsSpin2)
 {
-    GlobalV::NSPIN = 2;
+    PARAM.input.nspin = 2;
     GlobalV::NBANDS = 0;
     elecstate->init_nelec_spin();
     elecstate->cal_nbands();
@@ -298,7 +302,7 @@ TEST_F(ElecStateTest, CalNbandsSpin2)
 
 TEST_F(ElecStateTest, CalNbandsSpin2LCAO)
 {
-    GlobalV::NSPIN = 2;
+    PARAM.input.nspin = 2;
     GlobalV::NBANDS = 0;
     PARAM.input.basis_type = "lcao";
     elecstate->init_nelec_spin();
@@ -347,8 +351,8 @@ TEST_F(ElecStateTest, GetRho)
     K_Vectors* klist = new K_Vectors;
     int nk = 1;
     int nrxx = 100;
-    charge->rho = new double*[GlobalV::NSPIN];
-    for (int i = 0; i < GlobalV::NSPIN; ++i)
+    charge->rho = new double*[PARAM.input.nspin];
+    for (int i = 0; i < PARAM.input.nspin; ++i)
     {
         charge->rho[i] = new double[nrxx];
         for (int j = 0; j < nrxx; ++j)
@@ -359,7 +363,7 @@ TEST_F(ElecStateTest, GetRho)
     elecstate->init_ks(charge, klist, nk, rhopw, bigpw);
     EXPECT_EQ(elecstate->getRho(0), &(charge->rho[0][0]));
     EXPECT_EQ(elecstate->getRho(0)[nrxx - 1], 1.0);
-    for (int i = 0; i < GlobalV::NSPIN; ++i)
+    for (int i = 0; i < PARAM.input.nspin; ++i)
     {
         delete[] charge->rho[i];
     }
@@ -390,7 +394,8 @@ TEST_F(ElecStateTest, InitSCF)
     int istep = 0;
     ModuleBase::ComplexMatrix strucfac;
     elecstate->eferm = efermi;
-    EXPECT_NO_THROW(elecstate->init_scf(istep, strucfac));
+    ModuleSymmetry::Symmetry symm;
+    EXPECT_NO_THROW(elecstate->init_scf(istep, strucfac, symm));
     // delete elecstate->pot is done in the destructor of elecstate
     delete charge;
 }
@@ -529,14 +534,14 @@ TEST_F(ElecStateTest, CalculateWeightsIWeights)
 TEST_F(ElecStateTest, CalculateWeightsIWeightsTwoFermi)
 {
     // get nelec_spin
-    GlobalV::TWO_EFERMI = true;
-    GlobalV::NSPIN = 2;
+    PARAM.sys.two_fermi = true;
+    PARAM.input.nspin = 2;
     elecstate->init_nelec_spin();
     EXPECT_EQ(elecstate->nelec_spin[0], 5.0);
     EXPECT_EQ(elecstate->nelec_spin[1], 5.0);
     //
     EXPECT_FALSE(elecstate->skip_weights);
-    int nks = 5*GlobalV::NSPIN;
+    int nks = 5*PARAM.input.nspin;
     K_Vectors* klist = new K_Vectors;
     klist->set_nks(nks);
     klist->wk.resize(nks);
@@ -636,14 +641,14 @@ TEST_F(ElecStateTest, CalculateWeightsGWeightsTwoFermi)
 {
     Occupy::use_gaussian_broadening = true;
     // get nelec_spin
-    GlobalV::TWO_EFERMI = true;
-    GlobalV::NSPIN = 2;
+    PARAM.sys.two_fermi = true;
+    PARAM.input.nspin = 2;
     elecstate->init_nelec_spin();
     EXPECT_EQ(elecstate->nelec_spin[0], 5.0);
     EXPECT_EQ(elecstate->nelec_spin[1], 5.0);
     //
     EXPECT_FALSE(elecstate->skip_weights);
-    int nks = 5*GlobalV::NSPIN;
+    int nks = 5*PARAM.input.nspin;
     K_Vectors* klist = new K_Vectors;
     klist->set_nks(nks);
     klist->wk.resize(nks);

@@ -1,9 +1,10 @@
 #include "sto_wf.h"
 
+#include "module_parameter/parameter.h"
 #include <cassert>
 
 #include "module_base/memory.h"
-#include "time.h"
+#include <ctime>
 
 //---------Temporary------------------------------------
 #include "module_base/complexmatrix.h"
@@ -80,12 +81,12 @@ void Allocate_Chi0(Stochastic_WF& stowf)
     // latter processor calculate more bands
     else
     {
-        igroup = GlobalV::NSTOGROUP - GlobalV::MY_STOGROUP - 1;
+        igroup = PARAM.inp.bndpar - GlobalV::MY_STOGROUP - 1;
     }
     const int nchi = PARAM.inp.nbands_sto;
     const int npwx = stowf.npwx;
     const int nks = stowf.nks;
-    const int ngroup = GlobalV::NSTOGROUP;
+    const int ngroup = PARAM.inp.bndpar;
     if (ngroup <= 0)
     {
         ModuleBase::WARNING_QUIT("Init_Sto_Orbitals", "ngroup <= 0!");
@@ -150,9 +151,9 @@ void Init_Com_Orbitals(Stochastic_WF& stowf)
     // latter processor calculate more bands
     else
     {
-        igroup = GlobalV::NSTOGROUP - GlobalV::MY_STOGROUP - 1;
+        igroup = PARAM.inp.bndpar - GlobalV::MY_STOGROUP - 1;
     }
-    const int ngroup = GlobalV::NSTOGROUP;
+    const int ngroup = PARAM.inp.bndpar;
     const int n_in_pool = GlobalV::NPROC_IN_POOL;
     const int i_in_group = GlobalV::RANK_IN_STOGROUP;
     const int i_in_pool = GlobalV::RANK_IN_POOL;
@@ -263,7 +264,7 @@ void Init_Sto_Orbitals_Ecut(Stochastic_WF& stowf,
     const int nks = kv.get_nks();
     const int nchitot = PARAM.inp.nbands_sto;
     bool* updown = new bool[nx * ny * nz];
-    int* nrecv = new int[GlobalV::NSTOGROUP];
+    int* nrecv = new int[PARAM.inp.bndpar];
     const int nchiper = stowf.nchip[0];
 #ifdef __MPI
     MPI_Allgather(&nchiper, 1, MPI_INT, nrecv, 1, MPI_INT, PARAPW_WORLD);
@@ -276,7 +277,7 @@ void Init_Sto_Orbitals_Ecut(Stochastic_WF& stowf,
 
     for (int ik = 0; ik < nks; ++ik)
     {
-        const int iktot = kv.getik_global(ik);
+        const int iktot = K_Vectors::get_ik_global(ik, nkstot);
         const int npw = wfcpw.npwk[ik];
         int* ig2ixyz = new int[npw];
 

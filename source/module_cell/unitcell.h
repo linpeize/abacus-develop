@@ -78,9 +78,9 @@ class UnitCell {
     inline const int& get_npol() const { return npol; }
 
   private:
-    std::vector<int>
-        iat2iwt; // iat ==> iwt, the first global index for orbital of this atom
+    std::vector<int> iat2iwt; // iat ==> iwt, the first global index for orbital of this atom
     int npol = 1; // number of spin polarizations, initialized in set_iat2iwt
+    const int test_unitcell = 0;
                   // ----------------- END of iat2iwt part -----------------
 
   public:
@@ -262,7 +262,7 @@ class UnitCell {
      * elsewhere. Print STRU file respect to given setting
      *
      * @param fn STRU file name
-     * @param nspin GlobalV::NSPIN feed in
+     * @param nspin PARAM.inp.nspin feed in
      * @param direct true for direct coords, false for cartesian coords
      * @param vol true for printing velocities
      * @param magmom true for printing Mulliken population analysis produced

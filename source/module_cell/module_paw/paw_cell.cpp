@@ -125,7 +125,7 @@ void Paw_Cell::init_rhoij()
         for(int iproj = 0; iproj < nproj; iproj ++)
         {
             int i0 = iproj * (iproj + 1) / 2;
-            rhoij_in[i0 + iproj] = mstate_occ[iproj] / GlobalV::NSPIN;
+            rhoij_in[i0 + iproj] = mstate_occ[iproj] / PARAM.inp.nspin;
         }
 
         paw_atom_list[iat].set_rhoij(rhoij_in);
@@ -215,7 +215,7 @@ void Paw_Cell::set_paw_k(
 
     std::complex<double> i_cplx(0.0,1.0);
     // ig : i(G)
-    if(PARAM.inp.cal_force || GlobalV::CAL_STRESS)
+    if(PARAM.inp.cal_force || PARAM.inp.cal_stress)
     {
         ig.resize(npw);
         for(int ipw = 0; ipw < npw; ipw ++)
@@ -375,7 +375,8 @@ std::vector<double> Paw_Cell::calc_ylm(const int lmax, const double * r)
                     *Paw_Cell::ass_leg_pol(l,m,ctheta)*std::sqrt(2.0);
                 ylm[l0+m] = work1 * phase[m].real();
                 ylm[l0-m] = work1 * phase[m].imag();
-                if(m != l) fact = fact/double((l+m+1)*(l-m));
+                if(m != l) { fact = fact/double((l+m+1)*(l-m));
+}
             }
         }
     }
@@ -695,7 +696,8 @@ void Paw_Cell::paw_nl_force(const std::complex<double> * psi, const double * eps
 
     for(int iband = 0; iband < nbands; iband ++)
     {
-        if(weight[iband] < 1e-8) continue;
+        if(weight[iband] < 1e-8) { continue;
+}
         for(int iat = 0; iat < nat; iat ++)
         {
             // ca : <ptilde(G)|psi(G)>
@@ -767,5 +769,6 @@ void Paw_Cell::paw_nl_force(const std::complex<double> * psi, const double * eps
         }
     }
 
-    for(int i = 0; i < nat*3; i ++) force[i] = force[i] * 2.0;
+    for(int i = 0; i < nat*3; i ++) { force[i] = force[i] * 2.0;
+}
 }

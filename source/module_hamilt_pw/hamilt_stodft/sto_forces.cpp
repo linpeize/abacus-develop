@@ -133,7 +133,7 @@ void Sto_Forces::cal_stoforce(ModuleBase::matrix& force,
     }
 
  	GlobalV::ofs_running << setiosflags(std::ios::fixed) << std::setprecision(6) << std::endl;
-	if(GlobalV::TEST_FORCE)
+	if(PARAM.inp.test_force)
 	{
         ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "LOCAL    FORCE (Ry/Bohr)", forcelc);
         ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NONLOCAL FORCE (Ry/Bohr)", forcenl);
@@ -151,7 +151,7 @@ void Sto_Forces::cal_stoforce(ModuleBase::matrix& force,
     // output force in unit eV/Angstrom
     GlobalV::ofs_running << std::endl;
     
-	if(GlobalV::TEST_FORCE)
+	if(PARAM.inp.test_force)
 	{
         ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "LOCAL    FORCE (eV/Angstrom)", forcelc, false);
         ModuleIO::print_force(GlobalV::ofs_running, GlobalC::ucell, "NONLOCAL FORCE (eV/Angstrom)", forcenl, false);
@@ -224,13 +224,13 @@ void Sto_Forces::cal_sto_force_nl(ModuleBase::matrix& forcenl,
 		psi_in->fix_k(ik);
 		stowf.shchi->fix_k(ik);
 		//KS orbitals
-		int npmks = GlobalV::NPOL * nksbands;
+		int npmks = PARAM.globalv.npol * nksbands;
 		zgemm_(&transa,&transb,&nkb,&npmks,&npw,&ModuleBase::ONE,
 				GlobalC::ppcell.vkb.c,&npwx,
             	psi_in->get_pointer(),&npwx,
             	&ModuleBase::ZERO,becp.c,&nkb);
 		//stochastic orbitals
-		int npmsto = GlobalV::NPOL * nstobands;
+		int npmsto = PARAM.globalv.npol * nstobands;
 		zgemm_(&transa,&transb,&nkb,&npmsto,&npw,&ModuleBase::ONE,
 				GlobalC::ppcell.vkb.c,&npwx,
             	stowf.shchi->get_pointer(),&npwx,

@@ -45,6 +45,20 @@ K_Vectors::~K_Vectors()
 #endif
 }
 
+int K_Vectors::get_ik_global(const int& ik, const int& nkstot)
+{
+    int nkp = nkstot / PARAM.inp.kpar;
+    int rem = nkstot % PARAM.inp.kpar;
+    if (GlobalV::MY_POOL < rem)
+    {
+        return GlobalV::MY_POOL * nkp + GlobalV::MY_POOL + ik;
+    }
+    else
+    {
+        return GlobalV::MY_POOL * nkp + rem + ik;
+    }
+}
+
 void K_Vectors::set(const ModuleSymmetry::Symmetry& symm,
                     const std::string& k_file_name,
                     const int& nspin_in,
@@ -136,7 +150,7 @@ void K_Vectors::set(const ModuleSymmetry::Symmetry& symm,
     {
         // output kpoints file
         std::stringstream skpt;
-        skpt << GlobalV::global_readin_dir << "kpoints";
+        skpt << PARAM.globalv.global_readin_dir << "kpoints";
         std::ofstream ofkpt(skpt.str().c_str()); // clear kpoints
         ofkpt << skpt2 << skpt1;
         ofkpt.close();
@@ -205,7 +219,7 @@ bool K_Vectors::read_kpoints(const std::string& fn)
 
     // 1. Overwrite the KPT file and default K-point information if needed
     // mohan add 2010-09-04
-    if (GlobalV::GAMMA_ONLY_LOCAL)
+    if (PARAM.globalv.gamma_only_local)
     {
         GlobalV::ofs_warning << " Auto generating k-points file: " << fn << std::endl;
         std::ofstream ofs(fn.c_str());
@@ -484,9 +498,6 @@ double K_Vectors::Monkhorst_Pack_formula(const int& k_type, const double& offset
 // add by dwan
 void K_Vectors::Monkhorst_Pack(const int* nmp_in, const double* koffset_in, const int k_type)
 {
-    if (GlobalV::test_kpoint) {
-        ModuleBase::TITLE("K_Vectors", "Monkhorst_Pack");
-    }
     const int mpnx = nmp_in[0];
     const int mpny = nmp_in[1];
     const int mpnz = nmp_in[2];
@@ -879,9 +890,9 @@ void K_Vectors::ibz_kpoint(const ModuleSymmetry::Symmetry& symm,
         // if really there is no equivalent k point in the list, then add it.
         if (!already_exist)
         {
-            // if it's a new ibz kpoint.
-            // nkstot_ibz indicate the index of ibz kpoint.
-            kvec_d_ibz[nkstot_ibz] = kvec_rot;
+			//if it's a new ibz kpoint.
+			//nkstot_ibz indicate the index of ibz kpoint.
+            kvec_d_ibz[nkstot_ibz] = kvec_d[i];
             // output in kpoints file
             ibz_index[i] = nkstot_ibz;
 
@@ -925,6 +936,38 @@ void K_Vectors::ibz_kpoint(const ModuleSymmetry::Symmetry& symm,
     }
 
     delete[] kkmatrix;
+
+#ifdef __EXX
+    // setup kstars according to the final (max-norm) kvec_d_ibz
+    this->kstars.resize(nkstot_ibz);
+    if (ModuleSymmetry::Symmetry::symm_flag == 1)
+    {
+        for (int i = 0; i < nkstot; ++i)
+        {
+            int exist_number = -1;
+            int isym = 0;
+            for (int j = 0; j < nrotkm; ++j)
+            {
+                kvec_rot = kvec_d[i] * kgmatrix[j];
+                restrict_kpt(kvec_rot);
+                for (int k = 0; k < nkstot_ibz; ++k)
+                {
+                    if (symm.equal(kvec_rot.x, kvec_d_ibz[k].x) &&
+                        symm.equal(kvec_rot.y, kvec_d_ibz[k].y) &&
+                        symm.equal(kvec_rot.z, kvec_d_ibz[k].z))
+                    {
+                        isym = j;
+                        exist_number = k;
+                        break;
+                    }
+                }
+                if (exist_number != -1) break;
+            }
+            this->kstars[exist_number].insert(std::make_pair(isym, kvec_d[i]));
+        }
+    }
+#endif
+
     // output in kpoints file
     std::stringstream ss;
     ss << " " << std::setw(40) << "nkstot"
@@ -986,7 +1029,7 @@ void K_Vectors::ibz_kpoint(const ModuleSymmetry::Symmetry& symm,
 void K_Vectors::set_both_kvec(const ModuleBase::Matrix3& G, const ModuleBase::Matrix3& R, std::string& skpt)
 {
 
-    if (GlobalV::FINAL_SCF) // LiuXh add 20180606
+    if (PARAM.inp.final_scf) // LiuXh add 20180606
     {
         if (k_nkstot == 0)
         {
@@ -1197,6 +1240,40 @@ void K_Vectors::mpi_k()
         wk[i] = wk_aux[k_index];
         isk[i] = isk_aux[k_index];
     }
+
+#ifdef __EXX
+    if (ModuleSymmetry::Symmetry::symm_flag == 1)
+    {//bcast kstars
+        this->kstars.resize(nkstot);
+        for (int ikibz = 0;ikibz < nkstot;++ikibz)
+        {
+            int starsize = this->kstars[ikibz].size();
+            Parallel_Common::bcast_int(starsize);
+            GlobalV::ofs_running << "starsize: " << starsize << std::endl;
+            auto ks = this->kstars[ikibz].begin();
+            for (int ik = 0;ik < starsize;++ik)
+            {
+                int isym = 0;
+                ModuleBase::Vector3<double> ks_vec(0, 0, 0);
+                if (GlobalV::MY_RANK == 0)
+                {
+                    isym = ks->first;
+                    ks_vec = ks->second;
+                    ++ks;
+                }
+                Parallel_Common::bcast_int(isym);
+                Parallel_Common::bcast_double(ks_vec.x);
+                Parallel_Common::bcast_double(ks_vec.y);
+                Parallel_Common::bcast_double(ks_vec.z);
+                GlobalV::ofs_running << "isym: " << isym << " ks_vec: " << ks_vec.x << " " << ks_vec.y << " " << ks_vec.z << std::endl;
+                if (GlobalV::MY_RANK != 0)
+                {
+                    kstars[ikibz].insert(std::make_pair(isym, ks_vec));
+                }
+            }
+        }
+    }
+#endif
 } // END SUBROUTINE
 #endif
 

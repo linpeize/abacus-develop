@@ -92,16 +92,18 @@ void ESolver_KS_LCAO_TDDFT::before_all_runners(const Input_para& inp, UnitCell& 
 								 inp.lcao_dr,
 								 inp.lcao_rmax,
                                  ucell, 
-                                 two_center_bundle_);
+                                 two_center_bundle_,
+                                 orb_);
 
     // 5) allocate H and S matrices according to computational resources
-    LCAO_domain::divide_HS_in_frag(GlobalV::GAMMA_ONLY_LOCAL, this->pv, kv.get_nks());
+    LCAO_domain::divide_HS_in_frag(PARAM.globalv.gamma_only_local, this->pv, kv.get_nks(), orb_);
+
 
     // 6) initialize Density Matrix
-    dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->init_DM(&kv, &this->pv, GlobalV::NSPIN);
+    dynamic_cast<elecstate::ElecStateLCAO<std::complex<double>>*>(this->pelec)->init_DM(&kv, &this->pv, PARAM.inp.nspin);
 
     // 8) initialize the charge density
-    this->pelec->charge->allocate(GlobalV::NSPIN);
+    this->pelec->charge->allocate(PARAM.inp.nspin);
     this->pelec->omega = GlobalC::ucell.omega; // this line is very odd.
 
     // 9) initializee the potential
@@ -166,8 +168,8 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
         this->pelec->f_en.demet = 0.0;
         if (this->psi != nullptr)
         {
-            hsolver::HSolverLCAO<std::complex<double>> hsolver_lcao_obj(&this->pv, GlobalV::KS_SOLVER);
-            hsolver_lcao_obj.solve(this->p_hamilt, this->psi[0], this->pelec_td, GlobalV::KS_SOLVER, false);
+            hsolver::HSolverLCAO<std::complex<double>> hsolver_lcao_obj(&this->pv, PARAM.inp.ks_solver);
+            hsolver_lcao_obj.solve(this->p_hamilt, this->psi[0], this->pelec_td, PARAM.inp.ks_solver, false);
         }
     }
     // else
@@ -212,9 +214,9 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(const int istep, const int iter, cons
     if (istep <= 1)
     {
         Symmetry_rho srho;
-        for (int is = 0; is < GlobalV::NSPIN; is++)
+        for (int is = 0; is < PARAM.inp.nspin; is++)
         {
-            srho.begin(is, *(pelec->charge), pw_rho, GlobalC::Pgrid, GlobalC::ucell.symm);
+            srho.begin(is, *(pelec->charge), pw_rho, GlobalC::ucell.symm);
         }
     }
 
@@ -233,7 +235,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
     // print Hamiltonian and Overlap matrix
     if (this->conv_elec)
     {
-        if (!GlobalV::GAMMA_ONLY_LOCAL)
+        if (!PARAM.globalv.gamma_only_local)
         {
             this->GK.renew(true);
         }
@@ -280,7 +282,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
         }
     }
 
-    if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao && (this->conv_elec || iter == GlobalV::SCF_NMAX)
+    if (elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao && (this->conv_elec || iter == PARAM.inp.scf_nmax)
         && (istep % PARAM.inp.out_interval == 0))
     {
         ModuleIO::write_wfc_nao(elecstate::ElecStateLCAO<std::complex<double>>::out_wfc_lcao,
@@ -295,7 +297,7 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
     // Calculate new potential according to new Charge Density
     if (!this->conv_elec)
     {
-        if (GlobalV::NSPIN == 4)
+        if (PARAM.inp.nspin == 4)
         {
             GlobalC::ucell.cal_ux();
         }
@@ -403,12 +405,12 @@ void ESolver_KS_LCAO_TDDFT::update_pot(const int istep, const int iter)
 
 void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
 {
-    for (int is = 0; is < GlobalV::NSPIN; is++)
+    for (int is = 0; is < PARAM.inp.nspin; is++)
     {
         if (module_tddft::Evolve_elec::out_dipole == 1)
         {
             std::stringstream ss_dipole;
-            ss_dipole << GlobalV::global_out_dir << "SPIN" << is + 1 << "_DIPOLE";
+            ss_dipole << PARAM.globalv.global_out_dir << "SPIN" << is + 1 << "_DIPOLE";
             ModuleIO::write_dipole(pelec->charge->rho_save[is], pelec->charge->rhopw, is, istep, ss_dipole.str());
         }
     }
@@ -423,6 +425,7 @@ void ESolver_KS_LCAO_TDDFT::after_scf(const int istep)
                                 kv,
                                 two_center_bundle_.overlap_orb.get(),
                                 tmp_DM->get_paraV_pointer(),
+                                orb_,
                                 this->RA);
     }
     ESolver_KS_LCAO<std::complex<double>, double>::after_scf(istep);

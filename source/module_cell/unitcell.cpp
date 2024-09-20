@@ -28,7 +28,7 @@
 #endif
 
 UnitCell::UnitCell() {
-    if (GlobalV::test_unitcell) {
+    if (test_unitcell) {
         ModuleBase::TITLE("unitcell", "Constructor");
 }
     Coordinate = "Direct";
@@ -88,7 +88,7 @@ UnitCell::~UnitCell() {
 #include "module_base/parallel_common.h"
 #ifdef __MPI
 void UnitCell::bcast_unitcell() {
-    if (GlobalV::test_unitcell) {
+    if (test_unitcell) {
         ModuleBase::TITLE("UnitCell", "bcast_unitcell");
 }
     Parallel_Common::bcast_string(Coordinate);
@@ -142,7 +142,7 @@ void UnitCell::bcast_unitcell() {
     Parallel_Common::bcast_double(latvec_supercell.e33);
     Parallel_Common::bcast_double(magnet.start_magnetization, ntype);
 
-    if (GlobalV::NSPIN == 4) {
+    if (PARAM.inp.nspin == 4) {
         Parallel_Common::bcast_double(magnet.ux_[0]);
         Parallel_Common::bcast_double(magnet.ux_[1]);
         Parallel_Common::bcast_double(magnet.ux_[2]);
@@ -169,7 +169,7 @@ void UnitCell::bcast_unitcell2() {
 #endif
 
 void UnitCell::print_cell(std::ofstream& ofs) const {
-    if (GlobalV::test_unitcell) {
+    if (test_unitcell) {
         ModuleBase::TITLE("UnitCell", "print_cell");
 }
 
@@ -195,14 +195,14 @@ void UnitCell::print_cell(std::ofstream& ofs) const {
 /*
 void UnitCell::print_cell_xyz(const std::string& fn) const
 {
-    if (GlobalV::test_unitcell)
+    if (test_unitcell)
         ModuleBase::TITLE("UnitCell", "print_cell_xyz");
 
     if (GlobalV::MY_RANK != 0)
         return; // xiaohui add 2015-03-15
 
     std::stringstream ss;
-    ss << GlobalV::global_out_dir << fn;
+    ss << PARAM.globalv.global_out_dir << fn;
 
     std::ofstream ofs(ss.str().c_str());
 
@@ -579,10 +579,6 @@ void UnitCell::setup_cell(const std::string& fn, std::ofstream& log) {
 #ifdef __MPI
     Parallel_Common::bcast_bool(ok);
     Parallel_Common::bcast_bool(ok2);
-    if (GlobalV::NSPIN == 4) {
-        Parallel_Common::bcast_bool(GlobalV::DOMAG);
-        Parallel_Common::bcast_bool(GlobalV::DOMAG_Z);
-    }
 #endif
     if (!ok) {
         ModuleBase::WARNING_QUIT(
@@ -599,7 +595,7 @@ void UnitCell::setup_cell(const std::string& fn, std::ofstream& log) {
 #endif
 
     // after read STRU, calculate initial total magnetization when NSPIN=2
-    if (GlobalV::NSPIN == 2 && !GlobalV::TWO_EFERMI) {
+    if (PARAM.inp.nspin == 2 && !PARAM.globalv.two_fermi) {
         for (int it = 0; it < this->ntype; it++) {
             for (int ia = 0; ia < this->atoms[it].na; ia++) {
                 GlobalV::nupdown += this->atoms[it].mag[ia];
@@ -661,7 +657,7 @@ void UnitCell::setup_cell(const std::string& fn, std::ofstream& log) {
     this->set_iat2itia();
 
 #ifdef USE_PAW
-    if (GlobalV::use_paw) {
+    if (PARAM.inp.use_paw) {
         GlobalC::paw_cell.set_libpaw_cell(latvec, lat0);
 
         int* typat;
@@ -687,7 +683,7 @@ void UnitCell::setup_cell(const std::string& fn, std::ofstream& log) {
 
         GlobalC::paw_cell.set_libpaw_files();
 
-        GlobalC::paw_cell.set_nspin(GlobalV::NSPIN);
+        GlobalC::paw_cell.set_nspin(PARAM.inp.nspin);
     }
 #endif
 
@@ -758,7 +754,7 @@ void UnitCell::read_pseudo(std::ofstream& ofs) {
             for (int it = 0; it < ntype; it++) {
                 Atom* atom = &atoms[it];
                 std::stringstream ss;
-                ss << GlobalV::global_out_dir << atom->label << "/"
+                ss << PARAM.globalv.global_out_dir << atom->label << "/"
                    << atom->label << ".NONLOCAL";
                 std::ofstream ofs(ss.str().c_str());
 
@@ -958,7 +954,7 @@ void UnitCell::cal_nwfc(std::ofstream& log) {
     for (int it = 0; it < ntype; it++) {
         atoms[it].stapos_wf = GlobalV::NLOCAL;
         const int nlocal_it = atoms[it].nw * atoms[it].na;
-        if (GlobalV::NSPIN != 4) {
+        if (PARAM.inp.nspin != 4) {
             GlobalV::NLOCAL += nlocal_it;
         } else {
             GlobalV::NLOCAL += nlocal_it * 2; // zhengdy-soc
@@ -985,15 +981,15 @@ void UnitCell::cal_nwfc(std::ofstream& log) {
     this->iwt2iw = new int[GlobalV::NLOCAL];
 
     this->itia2iat.create(ntype, namax);
-    // this->itiaiw2iwt.create(ntype, namax, nwmax*GlobalV::NPOL);
-    this->set_iat2iwt(GlobalV::NPOL);
+    // this->itiaiw2iwt.create(ntype, namax, nwmax*PARAM.globalv.npol);
+    this->set_iat2iwt(PARAM.globalv.npol);
     int iat = 0;
     int iwt = 0;
     for (int it = 0; it < ntype; it++) {
         for (int ia = 0; ia < atoms[it].na; ia++) {
             this->itia2iat(it, ia) = iat;
             // this->iat2ia[iat] = ia;
-            for (int iw = 0; iw < atoms[it].nw * GlobalV::NPOL; iw++) {
+            for (int iw = 0; iw < atoms[it].nw * PARAM.globalv.npol; iw++) {
                 // this->itiaiw2iwt(it, ia, iw) = iwt;
                 this->iwt2iat[iwt] = iat;
                 this->iwt2iw[iwt] = iw;
@@ -1050,8 +1046,8 @@ void UnitCell::cal_nwfc(std::ofstream& log) {
     // Use localized basis
     //=====================
     if ((PARAM.inp.basis_type == "lcao") || (PARAM.inp.basis_type == "lcao_in_pw")
-        || ((PARAM.inp.basis_type == "pw") && (GlobalV::psi_initializer)
-            && (GlobalV::init_wfc.substr(0, 3) == "nao")
+        || ((PARAM.inp.basis_type == "pw") && (PARAM.inp.psi_initializer)
+            && (PARAM.inp.init_wfc.substr(0, 3) == "nao")
             && (PARAM.inp.esolver_type == "ksdft"))) // xiaohui add 2013-09-02
     {
         ModuleBase::GlobalFunc::AUTO_SET("NBANDS", GlobalV::NBANDS);
@@ -1095,7 +1091,7 @@ void UnitCell::set_iat2iwt(const int& npol_in) {
 // Demand : atoms[].msh
 //======================
 void UnitCell::cal_meshx() {
-    if (GlobalV::test_pseudo_cell) {
+    if (PARAM.inp.test_pseudo_cell) {
         ModuleBase::TITLE("UnitCell", "cal_meshx");
 }
     this->meshx = 0;
@@ -1116,7 +1112,7 @@ void UnitCell::cal_meshx() {
 // 			atoms[].na
 //=========================
 void UnitCell::cal_natomwfc(std::ofstream& log) {
-    if (GlobalV::test_pseudo_cell) {
+    if (PARAM.inp.test_pseudo_cell) {
         ModuleBase::TITLE("UnitCell", "cal_natomwfc");
 }
 
@@ -1128,7 +1124,7 @@ void UnitCell::cal_natomwfc(std::ofstream& log) {
         int tmp = 0;
         for (int l = 0; l < atoms[it].ncpp.nchi; l++) {
             if (atoms[it].ncpp.oc[l] >= 0) {
-                if (GlobalV::NSPIN == 4) {
+                if (PARAM.inp.nspin == 4) {
                     if (atoms[it].ncpp.has_so) {
                         tmp += 2 * atoms[it].ncpp.lchi[l];
                         if (fabs(atoms[it].ncpp.jchi[l] - atoms[it].ncpp.lchi[l]
@@ -1258,14 +1254,14 @@ void UnitCell::setup(const std::string& latname_in,
         this->lc[0] = 1;
         this->lc[1] = 1;
         this->lc[2] = 1;
-        if (!GlobalV::relax_new) {
+        if (!PARAM.inp.relax_new) {
             ModuleBase::WARNING_QUIT(
                 "Input",
                 "there are bugs in the old implementation; set relax_new to be "
                 "1 for fixed_volume relaxation");
         }
     } else if (fixed_axes_in == "shape") {
-        if (!GlobalV::relax_new) {
+        if (!PARAM.inp.relax_new) {
             ModuleBase::WARNING_QUIT(
                 "Input",
                 "set relax_new to be 1 for fixed_shape relaxation");
@@ -1591,7 +1587,7 @@ void UnitCell::cal_nelec(double& nelec) {
     GlobalV::ofs_running << "\n SETUP THE ELECTRONS NUMBER" << std::endl;
 
     if (nelec == 0) {
-        if (GlobalV::use_paw) {
+        if (PARAM.inp.use_paw) {
 #ifdef USE_PAW
             for (int it = 0; it < this->ntype; it++) {
                 std::stringstream ss1, ss2;

@@ -24,16 +24,16 @@ void test_deepks::set_parameters()
     PARAM.input.basis_type = "lcao";
     // GlobalV::global_pseudo_type= "auto";
     PARAM.input.pseudo_rcut = 15.0;
-    GlobalV::global_out_dir = "./";
+    PARAM.sys.global_out_dir = "./";
     GlobalV::ofs_warning.open("warning.log");
     GlobalV::ofs_running.open("running.log");
-    GlobalV::deepks_setorb = true;
+    PARAM.sys.deepks_setorb = true;
     PARAM.input.cal_force = 1;
 
     std::ifstream ifs("INPUT");
     char word[80];
     ifs >> word;
-    ifs >> GlobalV::GAMMA_ONLY_LOCAL;
+    ifs >> PARAM.sys.gamma_only_local;
     ifs.close();
 
     ucell.latName = "none";
@@ -134,10 +134,10 @@ void test_deepks::setup_cell()
 void test_deepks::prep_neighbour()
 {
     double search_radius = atom_arrange::set_sr_NL(GlobalV::ofs_running,
-                                                   GlobalV::OUT_LEVEL,
+                                                   PARAM.input.out_level,
                                                    ORB.get_rcutmax_Phi(),
                                                    ucell.infoNL.get_rcutmax_Beta(),
-                                                   GlobalV::GAMMA_ONLY_LOCAL);
+                                                   PARAM.sys.gamma_only_local);
 
     atom_arrange::search(PARAM.inp.search_pbc,
                          GlobalV::ofs_running,
@@ -161,7 +161,7 @@ void test_deepks::set_orbs(const double& lat0_in)
                            lcao_dk,
                            lcao_dr,
                            lcao_rmax,
-                           GlobalV::deepks_setorb,
+                           PARAM.sys.deepks_setorb,
                            out_mat_r,
                            PARAM.input.cal_force,
                            my_rank);
@@ -191,10 +191,10 @@ void test_deepks::set_orbs(const double& lat0_in)
 void test_deepks::setup_kpt()
 {
     this->kv.set("KPT",
-                 GlobalV::NSPIN,
+                 PARAM.input.nspin,
                  ucell.G,
                  ucell.latvec,
-                 GlobalV::GAMMA_ONLY_LOCAL,
+                 PARAM.sys.gamma_only_local,
                  GlobalV::ofs_running,
                  GlobalV::ofs_warning);
 }

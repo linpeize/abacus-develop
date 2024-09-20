@@ -6,6 +6,7 @@
 #include "module_base/timer.h"
 #include "module_hamilt_lcao/module_dftu/dftu.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include <vector>
 
 #ifdef __DEEPKS
 #include "module_hamilt_lcao/module_deepks/LCAO_deepks.h"
@@ -41,7 +42,7 @@ namespace hamilt
 {
 
 template <typename TK, typename TR>
-HamiltLCAO<TK, TR>::HamiltLCAO(const Parallel_Orbitals* paraV, const K_Vectors& kv_in, const TwoCenterIntegrator& intor_overlap_orb)
+HamiltLCAO<TK, TR>::HamiltLCAO(const Parallel_Orbitals* paraV, const K_Vectors& kv_in, const TwoCenterIntegrator& intor_overlap_orb, const std::vector<double>& orb_cutoff)
 {
     this->classname = "HamiltLCAO";
 
@@ -57,6 +58,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(const Parallel_Orbitals* paraV, const K_Vectors& 
                                                                this->hR,
                                                                this->sR,
                                                                &GlobalC::ucell,
+                                                               orb_cutoff,
                                                                &GlobalC::GridD,
                                                                &intor_overlap_orb);
 }
@@ -68,6 +70,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
     elecstate::Potential* pot_in,
     const K_Vectors& kv_in,
     const TwoCenterBundle& two_center_bundle,
+    const LCAO_Orbitals& orb,
     elecstate::DensityMatrix<TK, double>* DM_in
 #ifdef __EXX
     , int* exx_two_level_step
@@ -96,7 +99,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
             pot_register_in.push_back("hartree");
         }
         pot_register_in.push_back("xc");
-        if (GlobalV::imp_sol)
+        if (PARAM.inp.imp_sol)
         {
             pot_register_in.push_back("surchem");
         }
@@ -129,6 +132,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                    this->hR,
                                                                    this->sR,
                                                                    &GlobalC::ucell,
+                                                                   orb.cutoffs(),
                                                                    &GlobalC::GridD,
                                                                    two_center_bundle.overlap_orb.get());
 
@@ -139,6 +143,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                            this->kv->kvec_d,
                                                                            this->hR,
                                                                            &GlobalC::ucell,
+                                                                           orb.cutoffs(),
                                                                            &GlobalC::GridD,
                                                                            two_center_bundle.kinetic_orb.get());
             this->getOperator()->add(ekinetic);
@@ -152,6 +157,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                            this->kv->kvec_d,
                                                                            this->hR,
                                                                            &GlobalC::ucell,
+                                                                           orb.cutoffs(),
                                                                            &GlobalC::GridD,
                                                                            two_center_bundle.overlap_orb_beta.get());
             this->getOperator()->add(nonlocal);
@@ -173,6 +179,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                     pot_in,
                                                                     this->hR, // no explicit call yet
                                                                     &GlobalC::ucell,
+                                                                    orb.cutoffs(),
                                                                     &GlobalC::GridD
                 );
                 this->getOperator()->add(veff);
@@ -180,7 +187,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
         }
 
 #ifdef __DEEPKS
-        if (GlobalV::deepks_scf)
+        if (PARAM.inp.deepks_scf)
         {
             Operator<TK>* deepks = new DeePKS<OperatorLCAO<TK, TR>>(this->hsk,
                                                                     this->kv->kvec_d,
@@ -188,6 +195,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                     &GlobalC::ucell,
                                                                     &GlobalC::GridD,
                                                                     two_center_bundle.overlap_orb_alpha.get(),
+                                                                    &orb,
                                                                     this->kv->get_nks(),
                                                                     DM_in);
             this->getOperator()->add(deepks);
@@ -195,10 +203,10 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
 #endif
 
         // end node should be OperatorDFTU
-        if (GlobalV::dft_plus_u)
+        if (PARAM.inp.dft_plus_u)
         {
             Operator<TK>* dftu = nullptr;
-            if (GlobalV::dft_plus_u == 2)
+            if (PARAM.inp.dft_plus_u == 2)
             {
                 dftu = new OperatorDFTU<OperatorLCAO<TK, TR>>(this->hsk,
                                                               kv->kvec_d,
@@ -213,6 +221,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                       GlobalC::ucell,
                                                       &GlobalC::GridD,
                                                       two_center_bundle.overlap_orb_onsite.get(),
+                                                      orb.cutoffs(),
                                                       &GlobalC::dftu);
             }
             this->getOperator()->add(dftu);
@@ -238,6 +247,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                      pot_in,
                                                                      this->hR,
                                                                      &GlobalC::ucell,
+                                                                     orb.cutoffs(),
                                                                      &GlobalC::GridD);
                 // reset spin index and real space Hamiltonian matrix
                 int start_spin = -1;
@@ -254,6 +264,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                      this->hR,
                                                                      this->sR,
                                                                      &GlobalC::ucell,
+                                                                     orb.cutoffs(),
                                                                      &GlobalC::GridD,
                                                                      two_center_bundle.overlap_orb.get());
         if (this->getOperator() == nullptr)
@@ -273,6 +284,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                            this->kv->kvec_d,
                                                                            this->hR,
                                                                            &GlobalC::ucell,
+                                                                           orb.cutoffs(),
                                                                            &GlobalC::GridD,
                                                                            two_center_bundle.kinetic_orb.get());
             this->getOperator()->add(ekinetic);
@@ -286,6 +298,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                            this->kv->kvec_d,
                                                                            this->hR,
                                                                            &GlobalC::ucell,
+                                                                           orb.cutoffs(),
                                                                            &GlobalC::GridD,
                                                                            two_center_bundle.overlap_orb_beta.get());
             // TDDFT velocity gague will calculate full non-local potential including the original one and the
@@ -301,7 +314,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
         }
 
 #ifdef __DEEPKS
-        if (GlobalV::deepks_scf)
+        if (PARAM.inp.deepks_scf)
         {
             Operator<TK>* deepks = new DeePKS<OperatorLCAO<TK, TR>>(this->hsk,
                                                                     this->kv->kvec_d,
@@ -309,6 +322,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                     &GlobalC::ucell,
                                                                     &GlobalC::GridD,
                                                                     two_center_bundle.overlap_orb_alpha.get(),
+                                                                    &orb,
                                                                     this->kv->get_nks(),
                                                                     DM_in);
             this->getOperator()->add(deepks);
@@ -323,6 +337,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                              this->hR,
                                                                              kv,
                                                                              &GlobalC::ucell,
+                                                                             orb.cutoffs(),
                                                                              &GlobalC::GridD,
                                                                              two_center_bundle.overlap_orb.get());
             this->getOperator()->add(td_ekinetic);
@@ -331,13 +346,14 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                                              this->kv->kvec_d,
                                                                              this->hR,
                                                                              &GlobalC::ucell,
+                                                                             orb,
                                                                              &GlobalC::GridD);
             this->getOperator()->add(td_nonlocal);
         }
-        if (GlobalV::dft_plus_u)
+        if (PARAM.inp.dft_plus_u)
         {
             Operator<TK>* dftu = nullptr;
-            if (GlobalV::dft_plus_u == 2)
+            if (PARAM.inp.dft_plus_u == 2)
             {
                 dftu = new OperatorDFTU<OperatorLCAO<TK, TR>>(this->hsk,
                                                               kv->kvec_d,
@@ -352,6 +368,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
                                                       GlobalC::ucell,
                                                       &GlobalC::GridD,
                                                       two_center_bundle.overlap_orb_onsite.get(),
+                                                      orb.cutoffs(),
                                                       &GlobalC::dftu);
             }
             this->getOperator()->add(dftu);
@@ -386,7 +403,7 @@ HamiltLCAO<TK, TR>::HamiltLCAO(Gint_Gamma* GG_in,
 #endif
     // if NSPIN==2, HR should be separated into two parts, save HR into this->hRS2
     int memory_fold = 1;
-    if (GlobalV::NSPIN == 2)
+    if (PARAM.inp.nspin == 2)
     {
         this->hRS2.resize(this->hR->get_nnr() * 2);
         this->hR->allocate(this->hRS2.data(), 0);
@@ -414,7 +431,7 @@ void HamiltLCAO<TK, TR>::updateHk(const int ik)
     ModuleBase::TITLE("HamiltLCAO", "updateHk");
     ModuleBase::timer::tick("HamiltLCAO", "updateHk");
     // update global spin index
-    if (GlobalV::NSPIN == 2)
+    if (PARAM.inp.nspin == 2)
     {
         // if Veff is added and current_spin is changed, refresh HR
         if (PARAM.inp.vl_in_h && this->kv->isk[ik] != this->current_spin)
@@ -438,7 +455,7 @@ void HamiltLCAO<TK, TR>::refresh()
 {
     ModuleBase::TITLE("HamiltLCAO", "refresh");
     dynamic_cast<hamilt::OperatorLCAO<TK, TR>*>(this->ops)->set_hr_done(false);
-    if (GlobalV::NSPIN == 2)
+    if (PARAM.inp.nspin == 2)
     {
         this->refresh_times = 1;
         this->current_spin = 0;

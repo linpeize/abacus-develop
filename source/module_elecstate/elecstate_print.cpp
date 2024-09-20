@@ -183,21 +183,21 @@ void ElecState::print_eigenvalue(std::ofstream& ofs)
         ofs << std::setiosflags(std::ios::showpoint);
         if (ik == 0)
         {
-            ofs << "   NSPIN == " << GlobalV::NSPIN << std::endl;
-            if (GlobalV::NSPIN == 2)
+            ofs << "   NSPIN == " << PARAM.inp.nspin << std::endl;
+            if (PARAM.inp.nspin == 2)
             {
                 ofs << "SPIN UP : " << std::endl;
             }
         }
         else if (ik == this->klist->get_nks() / 2)
         {
-            if (GlobalV::NSPIN == 2)
+            if (PARAM.inp.nspin == 2)
             {
                 ofs << "SPIN DOWN : " << std::endl;
             }
         }
 
-        if (GlobalV::NSPIN == 2)
+        if (PARAM.inp.nspin == 2)
         {
             if (this->klist->isk[ik] == 0)
             {
@@ -316,7 +316,7 @@ void ElecState::print_etot(const bool converged,
     std::vector<std::string> titles;
     std::vector<double> energies_Ry;
     std::vector<double> energies_eV;
-    if (printe > 0 && ((iter + 1) % printe == 0 || converged || iter == GlobalV::SCF_NMAX))
+    if (printe > 0 && ((iter + 1) % printe == 0 || converged || iter == PARAM.inp.scf_nmax))
     {
         int n_order = std::max(0, Occupy::gaussian_type);
         titles.push_back("E_KohnSham");
@@ -352,7 +352,7 @@ void ElecState::print_etot(const bool converged,
         }
         titles.push_back("E_exx");
         energies_Ry.push_back(this->f_en.exx);
-        if (GlobalV::imp_sol)
+        if (PARAM.inp.imp_sol)
         {
             titles.push_back("E_sol_el");
             energies_Ry.push_back(this->f_en.esol_el);
@@ -371,7 +371,7 @@ void ElecState::print_etot(const bool converged,
         }
 
 #ifdef __DEEPKS
-        if (GlobalV::deepks_scf) // caoyu add 2021-08-10
+        if (PARAM.inp.deepks_scf) // caoyu add 2021-08-10
         {
             titles.push_back("E_DeePKS");
             energies_Ry.push_back(GlobalC::ld.E_delta);
@@ -386,7 +386,7 @@ void ElecState::print_etot(const bool converged,
         energies_Ry.push_back(this->f_en.etot_harris);
     }
 
-    if (GlobalV::TWO_EFERMI)
+    if (PARAM.globalv.two_fermi)
     {
         titles.push_back("E_Fermi_up");
         energies_Ry.push_back(this->eferm.ef_up);
@@ -400,7 +400,7 @@ void ElecState::print_etot(const bool converged,
     }
     if (PARAM.inp.out_bandgap)
     {
-        if (!GlobalV::TWO_EFERMI)
+        if (!PARAM.globalv.two_fermi)
         {
             titles.push_back("E_bandgap");
             energies_Ry.push_back(this->bandgap);
@@ -423,10 +423,10 @@ void ElecState::print_etot(const bool converged,
                    {FmtTable::Align::LEFT, FmtTable::Align::CENTER});
     table << titles << energies_Ry << energies_eV;
     GlobalV::ofs_running << table.str() << std::endl;
-    if (GlobalV::OUT_LEVEL == "ie" || GlobalV::OUT_LEVEL == "m") // xiaohui add 'm' option, 2015-09-16
+    if (PARAM.inp.out_level == "ie" || PARAM.inp.out_level == "m") // xiaohui add 'm' option, 2015-09-16
     {
         std::vector<double> mag;
-        switch (GlobalV::NSPIN)
+        switch (PARAM.inp.nspin)
         {
         case 2:
             mag = {get_ucell_tot_magnetization(), get_ucell_abs_magnetization()};

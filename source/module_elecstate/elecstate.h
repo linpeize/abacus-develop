@@ -1,5 +1,6 @@
 #ifndef ELECSTATE_H
 #define ELECSTATE_H
+#include "module_parameter/parameter.h"
 
 #include "fp_energy.h"
 #include "module_cell/klist.h"
@@ -21,7 +22,7 @@ class ElecState
         this->charge = charge_in;
         this->charge->set_rhopw(rhopw_in);
         this->bigpw = bigpw_in;
-        this->eferm.two_efermi = GlobalV::TWO_EFERMI;
+        this->eferm.two_efermi = PARAM.globalv.two_fermi;
     }
     virtual ~ElecState()
     {
@@ -94,7 +95,18 @@ class ElecState
         return;
     }
 
-    void init_scf(const int istep, const ModuleBase::ComplexMatrix& strucfac);
+    /**
+     * @brief Init rho_core, init rho, renormalize rho, init pot
+     * 
+     * @param istep i-th step
+     * @param strucfac structure factor
+     * @param symm symmetry
+     * @param wfcpw PW basis for wave function if needed
+     */
+    void init_scf(const int istep,
+                  const ModuleBase::ComplexMatrix& strucfac,
+                  ModuleSymmetry::Symmetry& symm,
+                  const void* wfcpw = nullptr);
     std::string classname = "elecstate";
 
     int iter = 0;                                  ///< scf iteration
