@@ -34,7 +34,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
     //Exchange-Correlation potential Vxc(r) from n(r)
     double etxc = 0.0;
     double vtxc = 0.0;
-    ModuleBase::matrix v(GlobalV::NSPIN, nrxx);
+    ModuleBase::matrix v(PARAM.inp.nspin, nrxx);
 
     // the square of the e charge
     // in Rydeberg unit, so * 2.0.
@@ -42,7 +42,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
 
     double vanishing_charge = 1.0e-10;
 
-    if (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
+    if (PARAM.inp.nspin == 1 || ( PARAM.inp.nspin ==4 && !PARAM.globalv.domag && !PARAM.globalv.domag_z))
     {
         // spin-unpolarized case
 #ifdef _OPENMP
@@ -68,7 +68,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
             } // endif
         } //enddo
     }
-    else if(GlobalV::NSPIN ==2)
+    else if(PARAM.inp.nspin ==2)
     {
         // spin-polarized case
 #ifdef _OPENMP
@@ -94,7 +94,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
                 double vxc[2];
                 XC_Functional::xc_spin(arhox, zeta, exc, vxc[0], vxc[1]);
 
-                for (int is = 0;is < GlobalV::NSPIN;is++)
+                for (int is = 0;is < PARAM.inp.nspin;is++)
                 {
                     v(is, ir) = e2 * vxc[is];
                 }
@@ -104,7 +104,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
             }
         }
     }
-    else if(GlobalV::NSPIN == 4)//noncollinear case added by zhengdy
+    else if(PARAM.inp.nspin == 4)//noncollinear case added by zhengdy
     {
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:etxc) reduction(+:vtxc)

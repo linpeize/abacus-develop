@@ -4,6 +4,7 @@
 #include "xc_functional_libxc.h"
 #include "module_elecstate/module_charge/charge.h"
 #include "module_base/global_variable.h"
+#include "module_parameter/parameter.h"
 #include "module_base/parallel_reduce.h"
 #include "module_base/timer.h"
 #include "module_base/tool_title.h"
@@ -23,7 +24,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_libxc");
 
     const int nspin =
-        (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
+        (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !PARAM.globalv.domag && !PARAM.globalv.domag_z))
         ? 1 : 2;
 
     //----------------------------------------------------------

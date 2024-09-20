@@ -434,8 +434,8 @@ void HSolverPW<T, Device>::hamiltSolvePsiK(hamilt::Hamilt<T, Device>* hm,
     else if (this->method == "dav_subspace")
     {
         auto ngk_pointer = psi.get_ngk_pointer();
-        auto hpsi_func = [hm, ngk_pointer](T* hpsi_out,
-                                           T* psi_in,
+        auto hpsi_func = [hm, ngk_pointer](T* psi_in,
+                                           T* hpsi_out,
                                            const int nband_in,
                                            const int nbasis_in,
                                            const int band_index1,
@@ -460,7 +460,7 @@ void HSolverPW<T, Device>::hamiltSolvePsiK(hamilt::Hamilt<T, Device>* hm,
                                                   psi.get_nbands(),
                                                   psi.get_k_first() ? psi.get_current_nbas()
                                                                     : psi.get_nk() * psi.get_nbasis(),
-                                                  GlobalV::PW_DIAG_NDIM,
+                                                  PARAM.inp.pw_diag_ndim,
                                                   this->diag_thr,
                                                   this->diag_iter_max,
                                                   this->need_subspace,
@@ -492,9 +492,9 @@ void HSolverPW<T, Device>::hamiltSolvePsiK(hamilt::Hamilt<T, Device>* hm,
 
         auto ngk_pointer = psi.get_ngk_pointer();
         /// wrap hpsi into lambda function, Matrix \times blockvector
-        /// hpsi(HX, X, nband, dim, band_index1, band_index2)
-        auto hpsi_func = [hm, ngk_pointer](T* hpsi_out,
-                                           T* psi_in,
+        /// hpsi(X, HX, nband, dim, band_index1, band_index2)
+        auto hpsi_func = [hm, ngk_pointer](T* psi_in,
+                                           T* hpsi_out,
                                            const int nband_in,
                                            const int nbasis_in,
                                            const int band_index1,
@@ -529,7 +529,7 @@ void HSolverPW<T, Device>::hamiltSolvePsiK(hamilt::Hamilt<T, Device>* hm,
         DiagoDavid<T, Device> david(pre_condition.data(),
                                     nband,
                                     dim,
-                                    GlobalV::PW_DIAG_NDIM,
+                                    PARAM.inp.pw_diag_ndim,
                                     this->use_paw,
                                     comm_info);
         // do diag and add davidson iteration counts up to avg_iter

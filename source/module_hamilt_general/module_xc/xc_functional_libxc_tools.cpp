@@ -3,6 +3,7 @@
 #include "xc_functional_libxc.h"
 #include "xc_functional.h"
 #include "module_elecstate/module_charge/charge.h"
+#include "module_parameter/parameter.h"
 
 // converting rho (abacus=>libxc)
 std::vector<double> XC_Functional_Libxc::convert_rho(
@@ -274,7 +275,7 @@ ModuleBase::matrix XC_Functional_Libxc::convert_v_nspin4(
 	ModuleBase::matrix v_nspin4(GlobalV::NSPIN, nrxx);
 	for( int ir=0; ir<nrxx; ++ir )
 		v_nspin4(0,ir) = 0.5 * (v(0,ir)+v(1,ir));
-	if(GlobalV::DOMAG || GlobalV::DOMAG_Z)
+	if(PARAM.globalv.domag || PARAM.globalv.domag_z)
 	{
 		for( int ir=0; ir<nrxx; ++ir )
 		{
