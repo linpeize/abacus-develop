@@ -28,7 +28,7 @@ XC_Functional_Libxc::convert_rho_amag_nspin4(
 	const std::size_t nrxx,
 	const Charge* const chr)
 {
-	assert(GlobalV::NSPIN==4);
+	assert(PARAM.inp.nspin==4);
 	std::vector<double> rho(nrxx*nspin);
 	std::vector<double> amag(nrxx);
 	#ifdef _OPENMP
@@ -270,9 +270,9 @@ ModuleBase::matrix XC_Functional_Libxc::convert_v_nspin4(
 	const std::vector<double> &amag,
 	const ModuleBase::matrix &v)
 {
-	assert(GlobalV::NSPIN==4);
+	assert(PARAM.inp.nspin==4);
 	constexpr double vanishing_charge = 1.0e-10;
-	ModuleBase::matrix v_nspin4(GlobalV::NSPIN, nrxx);
+	ModuleBase::matrix v_nspin4(PARAM.inp.nspin, nrxx);
 	for( int ir=0; ir<nrxx; ++ir )
 		v_nspin4(0,ir) = 0.5 * (v(0,ir)+v(1,ir));
 	if(PARAM.globalv.domag || PARAM.globalv.domag_z)
@@ -282,7 +282,7 @@ ModuleBase::matrix XC_Functional_Libxc::convert_v_nspin4(
 			if ( amag[ir] > vanishing_charge )
 			{
 				const double vs = 0.5 * (v(0,ir)-v(1,ir));
-				for(int ipol=1; ipol<GlobalV::NSPIN; ++ipol)
+				for(int ipol=1; ipol<PARAM.inp.nspin; ++ipol)
 					v_nspin4(ipol,ir) = vs * chr->rho[ipol][ir] / amag[ir];
 			}
 		}
