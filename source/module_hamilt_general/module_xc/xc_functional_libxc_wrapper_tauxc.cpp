@@ -6,6 +6,7 @@
 
 #include "xc_functional_libxc.h"
 #include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include <array>
 
 //tau_xc and tau_xc_spin: interface for calling xc_mgga_exc_vxc from LIBXC
 //XC_POLARIZED, XC_UNPOLARIZED: internal flags used in LIBXC, denote the polarized(nspin=1) or unpolarized(nspin=2) calculations, definition can be found in xc.h from LIBXC
@@ -56,9 +57,9 @@ void XC_Functional_Libxc::tau_xc_spin(
     v2xcup = v2xcdw = v2xcud = 0.0;
     v3xcup = v3xcdw = 0.0;
 
-    const std::vector<double> rho = {rhoup, rhodw};
-    const std::vector<double> grho = {gdr1.norm2(), gdr1 * gdr2, gdr2.norm2()};
-    const std::vector<double> tau = {tauup, taudw};
+    const std::array<double,2> rho = {rhoup, rhodw};
+    const std::array<double,3> grho = {gdr1.norm2(), gdr1 * gdr2, gdr2.norm2()};
+    const std::array<double,2> tau = {tauup, taudw};
 
 	std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func(func_id, XC_POLARIZED);
 
@@ -68,7 +69,7 @@ void XC_Functional_Libxc::tau_xc_spin(
         {
             constexpr double rho_threshold = 1E-6;
             constexpr double grho_threshold = 1E-10;
-            std::vector<double> sgn = {1.0, 1.0};
+            std::array<double,2> sgn = {1.0, 1.0};
             if(func.info->kind==XC_CORRELATION)
             {
                 if ( rho[0]<rho_threshold || sqrt(std::abs(grho[0]))<grho_threshold )
@@ -78,7 +79,8 @@ void XC_Functional_Libxc::tau_xc_spin(
             }
 
             double s = 0.0;
-            std::vector<double> v1xc(2), v2xc(3), v3xc(2), lapl(2), vlapl(2);
+            std::array<double,2> v1xc, v3xc, lapl, vlapl;
+            std::array<double,3> v2xc;
             // call Libxc function: xc_mgga_exc_vxc
             xc_mgga_exc_vxc( &func, 1, rho.data(), grho.data(), lapl.data(), tau.data(), &s, v1xc.data(), v2xc.data(), vlapl.data(), v3xc.data());
 

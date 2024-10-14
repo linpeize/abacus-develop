@@ -3,6 +3,7 @@
 #include "xc_functional_libxc.h"
 
 #include <xc.h>
+#include <array>
 
 void XC_Functional_Libxc::gcxc_libxc(
     const std::vector<int> &func_id,
@@ -40,8 +41,8 @@ void XC_Functional_Libxc::gcxc_spin_libxc(
 {
     sxc = v1xcup = v1xcdw = 0.0;
     v2xcup = v2xcdw = v2xcud = 0.0;
-    const std::vector<double> rho = {rhoup, rhodw};
-    const std::vector<double> grho = {gdr1.norm2(), gdr1*gdr2, gdr2.norm2()};
+    const std::array<double,2> rho = {rhoup, rhodw};
+    const std::array<double,3> grho = {gdr1.norm2(), gdr1*gdr2, gdr2.norm2()};
 
     std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func(func_id, XC_POLARIZED);
     for(xc_func_type &func : funcs)
@@ -50,7 +51,7 @@ void XC_Functional_Libxc::gcxc_spin_libxc(
         {
             constexpr double rho_threshold = 1E-6;
             constexpr double grho_threshold = 1E-10;
-            std::vector<double> sgn = {1.0, 1.0};
+            std::array<double,2> sgn = {1.0, 1.0};
             if(func.info->kind==XC_CORRELATION)
             {
                 if ( rho[0]<rho_threshold || sqrt(std::abs(grho[0]))<grho_threshold )
@@ -60,7 +61,8 @@ void XC_Functional_Libxc::gcxc_spin_libxc(
             }
 
             double s = 0.0;
-            std::vector<double> v1xc(2), v2xc(3);
+            std::array<double,2> v1xc;
+            std::array<double,3> v2xc;
             // call Libxc function: xc_gga_exc_vxc
             xc_gga_exc_vxc( &func, 1, rho.data(), grho.data(), &s, v1xc.data(), v2xc.data());
             sxc += s * (rho[0] * sgn[0] + rho[1] * sgn[1]);

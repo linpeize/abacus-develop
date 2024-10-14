@@ -4,6 +4,7 @@
 #include "xc_functional_libxc.h"
 #include "module_elecstate/module_charge/charge.h"
 #include "module_base/global_variable.h"
+#include "module_parameter/parameter.h"
 #include "module_base/parallel_reduce.h"
 #include "module_base/timer.h"
 #include "module_base/tool_title.h"
@@ -23,7 +24,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     ModuleBase::timer::tick("XC_Functional_Libxc","v_xc_libxc");
 
     const int nspin =
-        (GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
+        (PARAM.inp.nspin == 1 || ( PARAM.inp.nspin ==4 && !PARAM.globalv.domag && !PARAM.globalv.domag_z))
         ? 1 : 2;
 
     //----------------------------------------------------------
@@ -52,7 +53,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     // converting rho
     std::vector<double> rho;
     std::vector<double> amag;
-    if(1==nspin || 2==GlobalV::NSPIN)
+    if(1==nspin || 2==PARAM.inp.nspin)
     {
         rho = XC_Functional_Libxc::convert_rho(nspin, nrxx, chr);
     }
@@ -67,7 +68,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     std::vector<double> sigma;
     if(is_gga)
     {
-        gdr = XC_Functional_Libxc::cal_gdr(nspin, rho, tpiba, chr);
+        gdr = XC_Functional_Libxc::cal_gdr(nspin, nrxx, rho, tpiba, chr);
         sigma = XC_Functional_Libxc::convert_sigma(gdr);
     }
 
@@ -117,7 +118,7 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
             v);
     } // end for( xc_func_type &func : funcs )
 
-    if(4==GlobalV::NSPIN)
+    if(4==PARAM.inp.nspin)
     {
         v = XC_Functional_Libxc::convert_v_nspin4(nrxx, chr, amag, v);
     }
@@ -167,8 +168,8 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
     //output of the subroutine
     double etxc = 0.0;
     double vtxc = 0.0;
-    ModuleBase::matrix v(GlobalV::NSPIN,nrxx);
-    ModuleBase::matrix vofk(GlobalV::NSPIN,nrxx);
+    ModuleBase::matrix v(PARAM.inp.nspin,nrxx);
+    ModuleBase::matrix vofk(PARAM.inp.nspin,nrxx);
 
     //----------------------------------------------------------
     // xc_func_type is defined in Libxc package
@@ -177,12 +178,12 @@ std::tuple<double,double,ModuleBase::matrix,ModuleBase::matrix> XC_Functional_Li
     // https://www.tddft.org/programs/libxc/manual/libxc-5.1.x/
     //----------------------------------------------------------
 
-    const int nspin = GlobalV::NSPIN;
+    const int nspin = PARAM.inp.nspin;
     std::vector<xc_func_type> funcs = XC_Functional_Libxc::init_func( func_id, ( (1==nspin) ? XC_UNPOLARIZED:XC_POLARIZED ) );
 
     const std::vector<double> rho = XC_Functional_Libxc::convert_rho(nspin, nrxx, chr);
     const std::vector<std::vector<ModuleBase::Vector3<double>>> gdr
-        = XC_Functional_Libxc::cal_gdr(nspin, rho, tpiba, chr);
+        = XC_Functional_Libxc::cal_gdr(nspin, nrxx, rho, tpiba, chr);
     const std::vector<double> sigma = XC_Functional_Libxc::convert_sigma(gdr);
 
     //converting kin_r

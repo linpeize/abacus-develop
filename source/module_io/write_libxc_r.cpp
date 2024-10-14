@@ -12,6 +12,7 @@
 #include "module_esolver/esolver_fp.h"
 #include "module_io/cube_io.h"
 #include "module_base/global_variable.h"
+#include "module_parameter/parameter.h"
 #include "module_base/timer.h"
 #include "module_base/tool_title.h"
 
@@ -34,7 +35,7 @@ void ModuleIO::write_libxc_r(
 	ModuleBase::timer::tick("ModuleIO","write_libxc_r");
 
 	const int nspin =
-		(GlobalV::NSPIN == 1 || ( GlobalV::NSPIN ==4 && !GlobalV::DOMAG && !GlobalV::DOMAG_Z))
+		(PARAM.inp.nspin == 1 || ( PARAM.inp.nspin ==4 && !PARAM.globalv.domag && !PARAM.globalv.domag_z))
 		? 1 : 2;
 
 	//----------------------------------------------------------
@@ -63,7 +64,7 @@ void ModuleIO::write_libxc_r(
 	// converting rho
 	std::vector<double> rho;
 	std::vector<double> amag;
-	if(1==nspin || 2==GlobalV::NSPIN)
+	if(1==nspin || 2==PARAM.inp.nspin)
 	{
 		rho = XC_Functional_Libxc::convert_rho(nspin, nrxx, chr);
 	}
@@ -77,7 +78,7 @@ void ModuleIO::write_libxc_r(
 	std::vector<double> sigma;
 	if(is_gga)
 	{
-		const std::vector<std::vector<ModuleBase::Vector3<double>>> gdr = XC_Functional_Libxc::cal_gdr(nspin, rho, tpiba, chr);
+		const std::vector<std::vector<ModuleBase::Vector3<double>>> gdr = XC_Functional_Libxc::cal_gdr(nspin, nrxx, rho, tpiba, chr);
 		sigma = XC_Functional_Libxc::convert_sigma(gdr);
 	}
 
@@ -237,7 +238,7 @@ void ModuleIO::write_libxc_r(
 
 	write_data( "rho", rho, nspin );
 
-	if(1!=nspin && 2!=GlobalV::NSPIN)
+	if(1!=nspin && 2!=PARAM.inp.nspin)
 		write_data( "amag", amag, 1 );
 
 	if(is_gga)
