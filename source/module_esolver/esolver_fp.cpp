@@ -8,6 +8,7 @@
 #include "module_parameter/parameter.h"
 #include "module_io/rhog_io.h"
 #include "module_io/cif_io.h"
+#include "module_io/write_libxc_r.h"
 
 namespace ModuleESolver
 {
@@ -251,7 +252,19 @@ void ESolver_FP::after_scf(const int istep)
                 &(GlobalC::ucell),
                 this->pelec->pot->get_fixed_v());
         }
-    }
+    
+		if(PARAM.inp.out_xc_r[0]>=0)
+		{
+			ModuleIO::write_libxc_r(
+				PARAM.inp.out_xc_r[0],
+				XC_Functional::get_func_id(),
+				this->pw_rhod->nrxx, // number of real-space grid
+				GlobalC::ucell.omega, // volume of cell
+				GlobalC::ucell.tpiba,
+				&this->chr,
+				this);
+		}
+	}
 }
 
 void ESolver_FP::init_after_vc(const Input_para& inp, UnitCell& cell)
