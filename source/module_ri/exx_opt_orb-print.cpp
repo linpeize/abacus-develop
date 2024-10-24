@@ -14,7 +14,12 @@ void Exx_Opt_Orb::print_matrix(
 	const ModuleBase::Element_Basis_Index::Range &range_jles,
 	const ModuleBase::Element_Basis_Index::IndexLNM &index_jles)
 {
-	auto print_header = [&]( std::ofstream &ofs )
+	std::ofstream ofs(file_name+"_"+std::to_string(TA)+"_"+std::to_string(IA)+"_"+std::to_string(TB)+"_"+std::to_string(IB));
+	constexpr double scale = 1.0;
+
+	//---------------------
+	//  header
+	//---------------------
 	{
 		ofs << GlobalC::ucell.lat0 << std::endl;
 
@@ -108,14 +113,13 @@ void Exx_Opt_Orb::print_matrix(
 		ofs << "</WEIGHT_OF_KPOINTS>" << std::endl;
 
 		ofs << std::endl;
-	};
+	}
 
 
-	auto print_Q = [&]( std::ofstream &ofs )
+	//---------------------
+	//  < Psi | jY >
+	//---------------------
 	{
-		//---------------------
-		//  < Psi | jY >
-		//---------------------
 		ofs<< "<OVERLAP_Q>" << std::endl;
 
 		for( size_t iw0=0; iw0!=matrix_V.shape[0]; ++iw0 )
@@ -140,14 +144,13 @@ void Exx_Opt_Orb::print_matrix(
 		}
 
 		ofs<< "</OVERLAP_Q>" << std::endl << std::endl;
-	};
+	}
 
 
-	auto print_S = [&]( std::ofstream &ofs, const double scale=1 )
+	//---------------------
+	//  < jY | jY >
+	//---------------------
 	{
-		//---------------------
-		//  < jY | jY >
-		//---------------------
 		ofs<< "<OVERLAP_Sq>" <<std::endl;
 
 		for( size_t iat1=0; iat1!=matrix_S.size(); ++iat1 )
@@ -179,14 +182,12 @@ void Exx_Opt_Orb::print_matrix(
 		}
 
 		ofs<< "</OVERLAP_Sq>" << std::endl << std::endl;
-	};
+	}
 
-
-	auto print_V = [&]( std::ofstream &ofs, const double scale=1 )
+	//---------------------
+	//  < Psi | Psi >
+	//---------------------
 	{
-		//---------------------
-		//  < Psi | Psi >
-		//---------------------
 		ofs << "<OVERLAP_V>" << std::endl;
 
 		for( size_t iw0=0; iw0!=matrix_V.shape[0]; ++iw0 )
@@ -205,12 +206,5 @@ void Exx_Opt_Orb::print_matrix(
 		}
 
 		ofs << "</OVERLAP_V>" << std::endl << std::endl;
-	};
-
-	std::ofstream ofs(file_name+"_"+std::to_string(TA)+"_"+std::to_string(IA)+"_"+std::to_string(TB)+"_"+std::to_string(IB));
-	print_header(ofs);
-	print_Q(ofs);
-	print_S(ofs);
-	print_V(ofs);
-	ofs.close();
+	}
 }
