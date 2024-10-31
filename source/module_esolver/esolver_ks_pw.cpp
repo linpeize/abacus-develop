@@ -49,6 +49,10 @@
 #include <ATen/kernels/blas.h>
 #include <ATen/kernels/lapack.h>
 
+#ifdef __DSP
+#include "module_base/kernels/dsp/dsp_connector.h"
+#endif
+
 namespace ModuleESolver
 {
 
@@ -66,6 +70,10 @@ ESolver_KS_PW<T, Device>::ESolver_KS_PW()
         container::kernels::createGpuBlasHandle();
         container::kernels::createGpuSolverHandle();
     }
+#endif
+#ifdef __DSP
+    std::cout << " ** Initializing DSP Hardware..." << std::endl;
+    dspInitHandle(GlobalV::MY_RANK);
 #endif
 }
 
@@ -92,7 +100,10 @@ ESolver_KS_PW<T, Device>::~ESolver_KS_PW()
 #endif
         delete reinterpret_cast<psi::Psi<T, Device>*>(this->kspw_psi);
     }
-    
+#ifdef __DSP
+    std::cout << " ** Closing DSP Hardware..." << std::endl;
+    dspDestoryHandle(GlobalV::MY_RANK);
+#endif
     if (PARAM.inp.precision == "single")
     {
         delete reinterpret_cast<psi::Psi<std::complex<double>, Device>*>(this->__kspw_psi);
@@ -161,7 +172,7 @@ void ESolver_KS_PW<T, Device>::before_all_runners(const Input_para& inp, UnitCel
     //! 9) setup occupations
     if (PARAM.inp.ocp)
     {
-        this->pelec->fixed_weights(PARAM.inp.ocp_kb, GlobalV::NBANDS, GlobalV::nelec);
+        this->pelec->fixed_weights(PARAM.inp.ocp_kb, PARAM.inp.nbands, PARAM.inp.nelec);
     }
 }
 
@@ -228,21 +239,12 @@ void ESolver_KS_PW<T, Device>::before_scf(const int istep)
         {
             std::stringstream ss;
             ss << PARAM.globalv.global_out_dir << "SPIN" << is + 1 << "_CHG_INI.cube";
-            ModuleIO::write_cube(
-#ifdef __MPI
-                this->pw_big->bz,
-                this->pw_big->nbz,
-                this->pw_rhod->nplane,
-                this->pw_rhod->startz_current,
-#endif
+            ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
                 this->pelec->charge->rho[is],
                 is,
                 PARAM.inp.nspin,
                 istep,
                 ss.str(),
-                this->pw_rhod->nx,
-                this->pw_rhod->ny,
-                this->pw_rhod->nz,
                 this->pelec->eferm.ef,
                 &(GlobalC::ucell));
         }
@@ -255,21 +257,12 @@ void ESolver_KS_PW<T, Device>::before_scf(const int istep)
         {
             std::stringstream ss;
             ss << PARAM.globalv.global_out_dir << "SPIN" << is + 1 << "_POT_INI.cube";
-            ModuleIO::write_cube(
-#ifdef __MPI
-                this->pw_big->bz,
-                this->pw_big->nbz,
-                this->pw_rhod->nplane,
-                this->pw_rhod->startz_current,
-#endif
+            ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
                 this->pelec->pot->get_effective_v(is),
                 is,
                 PARAM.inp.nspin,
                 istep,
                 ss.str(),
-                this->pw_rhod->nx,
-                this->pw_rhod->ny,
-                this->pw_rhod->nz,
                 0.0, // efermi
                 &(GlobalC::ucell),
                 11, // precsion
@@ -352,15 +345,6 @@ void ESolver_KS_PW<T, Device>::hamilt2density(const int istep, const int iter, c
         hsolver::DiagoIterAssist<T, Device>::SCF_ITER = iter;
         hsolver::DiagoIterAssist<T, Device>::PW_DIAG_THR = ethr;
         hsolver::DiagoIterAssist<T, Device>::PW_DIAG_NMAX = PARAM.inp.pw_diag_nmax;
-
-        std::vector<bool> is_occupied(this->kspw_psi->get_nk() * this->kspw_psi->get_nbands(), true);
-
-        elecstate::set_is_occupied(is_occupied,
-                                   this->pelec,
-                                   hsolver::DiagoIterAssist<T, Device>::SCF_ITER,
-                                   this->kspw_psi->get_nk(),
-                                   this->kspw_psi->get_nbands(),
-                                   PARAM.inp.diago_full_acc);
         
         hsolver::HSolverPW<T, Device> hsolver_pw_obj(this->pw_wfc, 
                                                      &this->wf, 
@@ -369,7 +353,7 @@ void ESolver_KS_PW<T, Device>::hamilt2density(const int istep, const int iter, c
                                                      PARAM.inp.basis_type,
                                                      PARAM.inp.ks_solver,
                                                      PARAM.inp.use_paw,
-                                                     GlobalV::use_uspp,
+                                                     PARAM.globalv.use_uspp,
                                                      PARAM.inp.nspin,
                                                      
                                                      hsolver::DiagoIterAssist<T, Device>::SCF_ITER,
@@ -383,7 +367,6 @@ void ESolver_KS_PW<T, Device>::hamilt2density(const int istep, const int iter, c
                            this->kspw_psi[0],
                            this->pelec,
                            this->pelec->ekb.c,
-                           is_occupied,
                            GlobalV::RANK_IN_POOL,
                            GlobalV::NPROC_IN_POOL,
                            false);
@@ -432,7 +415,7 @@ void ESolver_KS_PW<T, Device>::hamilt2density(const int istep, const int iter, c
 template <typename T, typename Device>
 void ESolver_KS_PW<T, Device>::update_pot(const int istep, const int iter)
 {
-    if (!this->conv_elec)
+    if (!this->conv_esolver)
     {
         if (PARAM.inp.nspin == 4)
         {
@@ -440,6 +423,9 @@ void ESolver_KS_PW<T, Device>::update_pot(const int istep, const int iter)
         }
         this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
         this->pelec->f_en.descf = this->pelec->cal_delta_escf();
+#ifdef __MPI
+        MPI_Bcast(&(this->pelec->f_en.descf), 1, MPI_DOUBLE, 0, PARAPW_WORLD);
+#endif
     }
     else
     {
@@ -457,7 +443,7 @@ void ESolver_KS_PW<T, Device>::iter_finish(int& iter)
     // D in uspp need vloc, thus needs update when veff updated
     // calculate the effective coefficient matrix for non-local pseudopotential
     // projectors
-    if (GlobalV::use_uspp)
+    if (PARAM.globalv.use_uspp)
     {
         ModuleBase::matrix veff = this->pelec->pot->get_effective_v();
         GlobalC::ppcell.cal_effective_D(veff, this->pw_rhod, GlobalC::ucell);
@@ -479,21 +465,12 @@ void ESolver_KS_PW<T, Device>::iter_finish(int& iter)
                     data = this->pelec->charge->rho_save[is];
                 }
                 std::string fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_CHG.cube";
-                ModuleIO::write_cube(
-#ifdef __MPI
-                    this->pw_big->bz,
-                    this->pw_big->nbz,
-                    this->pw_rhod->nplane,
-                    this->pw_rhod->startz_current,
-#endif
+                ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
                     data,
                     is,
                     PARAM.inp.nspin,
                     0,
                     fn,
-                    this->pw_rhod->nx,
-                    this->pw_rhod->ny,
-                    this->pw_rhod->nz,
                     this->pelec->eferm.get_efval(is),
                     &(GlobalC::ucell),
                     3,
@@ -501,21 +478,12 @@ void ESolver_KS_PW<T, Device>::iter_finish(int& iter)
                 if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
                 {
                     fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_TAU.cube";
-                    ModuleIO::write_cube(
-#ifdef __MPI
-                        this->pw_big->bz,
-                        this->pw_big->nbz,
-                        this->pw_rhod->nplane,
-                        this->pw_rhod->startz_current,
-#endif
+                    ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
                         this->pelec->charge->kin_r_save[is],
                         is,
                         PARAM.inp.nspin,
                         0,
                         fn,
-                        this->pw_rhod->nx,
-                        this->pw_rhod->ny,
-                        this->pw_rhod->nz,
                         this->pelec->eferm.get_efval(is),
                         &(GlobalC::ucell));
                 }
@@ -738,7 +706,7 @@ void ESolver_KS_PW<T, Device>::after_all_runners()
             GlobalV::ofs_running << "\n Output bands in file: " << ss2.str() << std::endl;
             ModuleIO::nscf_band(is,
                                 ss2.str(),
-                                GlobalV::NBANDS,
+                                PARAM.inp.nbands,
                                 0.0,
                                 PARAM.inp.out_band[1],
                                 this->pelec->ekb,

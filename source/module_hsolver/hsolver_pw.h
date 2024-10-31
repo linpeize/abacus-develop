@@ -12,7 +12,7 @@ namespace hsolver
 template <typename T, typename Device = base_device::DEVICE_CPU>
 class HSolverPW
 {
-  private:
+  protected:
     // Note GetTypeReal<T>::type will
     // return T if T is real type(float, double),
     // otherwise return the real type of T(complex<float>, complex<double>)
@@ -48,7 +48,6 @@ class HSolverPW
                psi::Psi<T, Device>& psi,
                elecstate::ElecState* pes,
                double* out_eigenvalues,
-               const std::vector<bool>& is_occupied_in,
                const int rank_in_pool_in,
                const int nproc_in_pool_in,
                const bool skip_charge);
@@ -64,7 +63,7 @@ class HSolverPW
     void updatePsiK(hamilt::Hamilt<T, Device>* pHamilt, psi::Psi<T, Device>& psi, const int ik);
 
     // calculate the precondition array for diagonalization in PW base
-    void update_precondition(std::vector<Real>& h_diag, const int ik, const int npw);
+    void update_precondition(std::vector<Real>& h_diag, const int ik, const int npw, const Real vl_of_0);
 
     void output_iterInfo();
 
@@ -85,12 +84,17 @@ class HSolverPW
     const bool need_subspace; // for cg or dav_subspace
     const bool initialed_psi; 
 
-  private:
+  protected:
     Device* ctx = {};
 
     int rank_in_pool = 0;
     int nproc_in_pool = 1;
+  private:
+    /// @brief calculate the threshold for iterative-diagonalization for each band
+    void cal_ethr_band(const double& wk, const double* wg, const double& ethr, std::vector<double>& ethrs);
 
+    std::vector<double> ethr_band;
+                  
 #ifdef USE_PAW
     void paw_func_in_kloop(const int ik);
 

@@ -34,7 +34,6 @@
 #include "module_io/berryphase.h"
 #include "module_io/numerical_basis.h"
 #include "module_io/numerical_descriptor.h"
-#include "module_io/rho_io.h"
 #include "module_io/to_wannier90_pw.h"
 #include "module_io/winput.h"
 #include "module_io/write_elecstat_pot.h"
@@ -64,7 +63,7 @@ void ESolver_KS_PW<T, Device>::nscf() {
     if (diag_ethr - 1e-2 > -1e-5) {
         diag_ethr
             = std::max(1e-13,
-                       0.1 * std::min(1e-2, PARAM.inp.scf_thr / GlobalV::nelec));
+                       0.1 * std::min(1e-2, PARAM.inp.scf_thr / PARAM.inp.nelec));
     }
     GlobalV::ofs_running << " PW_DIAG_THR  = " << diag_ethr << std::endl;
 
@@ -79,7 +78,7 @@ void ESolver_KS_PW<T, Device>::nscf() {
     //! 4) print out band energies and weights
     std::cout << FmtCore::format("\n * * * * * *\n << Start %s.\n", "writing band energies");
     const int nspin = PARAM.inp.nspin;
-    const int nbands = GlobalV::NBANDS;
+    const int nbands = PARAM.inp.nbands;
     for (int ik = 0; ik < this->kv.get_nks(); ik++) {
         if (nspin == 2) {
             if (ik == 0) {
@@ -166,21 +165,12 @@ void ESolver_KS_PW<T, Device>::nscf() {
         {
             std::string fn = PARAM.globalv.global_out_dir + "/SPIN" + std::to_string(is + 1) + "_POT.cube";
 
-            ModuleIO::write_cube(
-#ifdef __MPI
-                this->pw_big->bz,
-                this->pw_big->nbz,
-                this->pw_rhod->nplane,
-                this->pw_rhod->startz_current,
-#endif
+            ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
                 this->pelec->pot->get_effective_v(is),
                 is,
                 PARAM.inp.nspin,
                 0,
                 fn,
-                this->pw_rhod->nx,
-                this->pw_rhod->ny,
-                this->pw_rhod->nz,
                 0.0, // efermi
                 &(GlobalC::ucell),
                 3,  // precision
