@@ -127,10 +127,12 @@ void ModuleIO::write_cube(
         ofs_cube << std::scientific;
     }
 
+    constexpr int n_data_newline = 6;
 #ifdef __MPI
-    ModuleIO::write_cube_core(ofs_cube, bz, nbz, nplane, startz_current, data, nx*ny, nz, 1, 6);
+    constexpr int nld = 1;
+    ModuleIO::write_cube_core(ofs_cube, bz, nbz, nplane, startz_current, data, nx*ny, nz, nld, n_data_newline);
 #else
-    ModuleIO::write_cube_core(ofs_cube, data, nx*ny, nz, 6);
+    ModuleIO::write_cube_core(ofs_cube, data, nx*ny, nz, n_data_newline);
 #endif
 
     if (my_rank == 0)
