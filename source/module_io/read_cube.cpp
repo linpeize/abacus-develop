@@ -129,17 +129,15 @@ bool ModuleIO::read_cube(
     return true;
 }
 
+#ifdef __MPI
 void ModuleIO::read_cube_core_match(
     std::ifstream &ifs,
-#ifdef __MPI
     const Parallel_Grid*const Pgrid,
     const bool flag_read_rank,
-#endif
     double*const data,
     const int nxy,
     const int nz)
 {
-#ifdef __MPI
     if (flag_read_rank)
     {
         std::vector<std::vector<double>> read_rho(nz, std::vector<double>(nxy));
@@ -155,12 +153,19 @@ void ModuleIO::read_cube_core_match(
         for (int iz = 0; iz < nz; iz++)
             Pgrid->zpiece_to_all(zpiece.data(), iz, data);
     }
+}
 #else
+void ModuleIO::read_cube_core_match(
+    std::ifstream &ifs,
+    double*const data,
+    const int nxy,
+    const int nz)
+{
     for (int ixy = 0; ixy < nxy; ixy++)
         for (int iz = 0; iz < nz; iz++)
             ifs >> data[iz * nxy + ixy];
-#endif
 }
+#endif
 
 void ModuleIO::read_cube_core_mismatch(
     std::ifstream &ifs,

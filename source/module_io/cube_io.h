@@ -49,19 +49,25 @@ void write_cube(
     const int out_fermi = 1); // mohan add 2007-10-17
 
 
+#ifdef __MPI
 // when MPI:
 //      read file as order (ixy,iz) to data[ixy*nz+iz]
+void read_cube_core_match(
+    std::ifstream &ifs,
+    const Parallel_Grid*const Pgrid,
+    const bool flag_read_rank,
+    double*const data,
+    const int nxy,
+    const int nz);
+#else
 // when serial:
 //      read file as order (ixy,iz) to data[iz*nxy+ixy]
 void read_cube_core_match(
     std::ifstream &ifs,
-#ifdef __MPI
-    const Parallel_Grid*const Pgrid,
-    const bool flag_read_rank,
-#endif
     double*const data,
     const int nxy,
     const int nz);
+#endif
 
 void read_cube_core_mismatch(
     std::ifstream &ifs,
