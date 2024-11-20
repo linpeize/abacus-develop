@@ -3,7 +3,7 @@
 namespace Base_Mixing
 {
 
-Mixing_Data::Mixing_Data(const int& ndim, const int& length, const size_t& type_size)
+Mixing_Data::Mixing_Data(const int& ndim, const std::size_t& length, const size_t& type_size)
 {
     this->ndim_tot = ndim;
     this->length = length;
@@ -19,7 +19,7 @@ Mixing_Data::~Mixing_Data()
         free(this->data);
 }
 
-void Mixing_Data::resize(const int& ndim, const int& length, const size_t& type_size)
+void Mixing_Data::resize(const int& ndim, const std::size_t& length, const size_t& type_size)
 {
     this->ndim_tot = ndim;
     this->length = length;
