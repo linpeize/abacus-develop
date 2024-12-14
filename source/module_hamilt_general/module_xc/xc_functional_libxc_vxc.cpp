@@ -27,6 +27,8 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     const int nspin =
         (PARAM.inp.nspin == 1 || ( PARAM.inp.nspin ==4 && !PARAM.globalv.domag && !PARAM.globalv.domag_z))
         ? 1 : 2;
+    
+    std::cout<<"nspin\t"<<nspin<<std::endl;
 
     //----------------------------------------------------------
     // xc_func_type is defined in Libxc package
@@ -112,12 +114,11 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
 
         // added by jghan, 2024-10-10
         double factor = 1.0;
-        if( scaling_factor == nullptr ) { ;
-        } else
+        if( scaling_factor != nullptr )
         {
             auto pair_factor = scaling_factor->find(func.info->number);
-            if( pair_factor != scaling_factor->end() ) { factor = pair_factor->second;
-}
+            if( pair_factor != scaling_factor->end() )
+                { factor = pair_factor->second; }
         }
 
         // time factor is added by jghan, 2024-10-10
@@ -143,6 +144,8 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional_Libxc::v_xc_libxc(		/
     Parallel_Reduce::reduce_pool(etxc);
     Parallel_Reduce::reduce_pool(vtxc);
     #endif
+
+	std::cout<<"etxc\t"<<etxc<<"\tvtxc\t"<<vtxc<<std::endl;
 
     etxc *= omega / chr->rhopw->nxyz;
     vtxc *= omega / chr->rhopw->nxyz;

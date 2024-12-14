@@ -52,9 +52,9 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
         {
             // total electron charge density
             double rhox = chr->rho[0][ir] + chr->rho_core[ir];
-            if(PARAM.inp.use_paw && rhox < 1e-14) { rhox = 1e-14;
-}
-            double arhox = std::abs(rhox);
+            if(PARAM.inp.use_paw && rhox < 1e-14)
+                { rhox = 1e-14; }
+            const double arhox = std::abs(rhox);
             if (arhox > vanishing_charge)
             {
                 double exc = 0.0;
@@ -178,6 +178,9 @@ std::tuple<double,double,ModuleBase::matrix> XC_Functional::v_xc(
     Parallel_Reduce::reduce_pool(etxc);
     Parallel_Reduce::reduce_pool(vtxc);
 #endif
+
+	std::cout<<"etxc\t"<<etxc<<"\tvtxc\t"<<vtxc<<std::endl;
+
     etxc *= ucell->omega / chr->rhopw->nxyz;
     vtxc *= ucell->omega / chr->rhopw->nxyz;
 
