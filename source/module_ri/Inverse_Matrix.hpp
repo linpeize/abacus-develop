@@ -8,6 +8,9 @@
 
 #include "Inverse_Matrix.h"
 #include "module_base/lapack_connector.h"
+#include <RI/global/Blas_Interface-Contiguous.h>
+#include <RI/global/Blas_Interface-Tensor.h>
+#include <RI/global/Lapack_Interface-Tensor.h>
 
 #include <cassert>
 
@@ -17,7 +20,7 @@ void Inverse_Matrix<Tdata>::cal_inverse( const Method &method )
 	switch(method)
 	{
 		case Method::potrf:		using_potrf();			break;
-//		case Method::syev:		using_syev(1E-6);		break;
+		case Method::heev:		using_heev(1E-6);		break;
 	}
 }
 
@@ -25,39 +28,42 @@ template<typename Tdata>
 void Inverse_Matrix<Tdata>::using_potrf()
 {
 	int info;
-	LapackConnector::potrf('U', A.shape[0], A.ptr(), A.shape[0], info);
+	LapackConnector::potrf('U', this->A.shape[0], this->A.ptr(), this->A.shape[0], info);
 	if(info)
 		throw std::range_error("info="+std::to_string(info)+"\n"+std::string(__FILE__)+" line "+std::to_string(__LINE__));
 
-	LapackConnector::potri('U', A.shape[0], A.ptr(), A.shape[0], info);
+	LapackConnector::potri('U', this->A.shape[0], this->A.ptr(), this->A.shape[0], info);
 	if(info)
 		throw std::range_error("info="+std::to_string(info)+"\n"+std::string(__FILE__)+" line "+std::to_string(__LINE__));
 
 	copy_down_triangle();
 }
 
-/*
-void Inverse_Matrix::using_syev( const double &threshold_condition_number )
+template<typename Tdata>
+void Inverse_Matrix<Tdata>::using_heev( const RI::Global_Func::To_Real_t<Tdata> &threshold_condition_number )
 {
-	std::vector<double> eigen_value(A.nr);
-	LapackConnector::dsyev('V','U',A,eigen_value.data(),info);
+	using Tdata_real = RI::Global_Func::To_Real_t<Tdata>;
+	std::vector<Tdata_real> eigen_value(this->A.shape[1]);
 
-	double eigen_value_max = 0;
-	for( const double &ie : eigen_value )
+	const int info = RI::Lapack_Interface::heev('V', 'U', this->A, eigen_value);
+	if(info)
+		throw std::range_error("info="+std::to_string(info)+"\n"+std::string(__FILE__)+" line "+std::to_string(__LINE__));
+
+	Tdata_real eigen_value_max = 0;
+	for( const Tdata_real &ie : eigen_value )
 		eigen_value_max = std::max( ie, eigen_value_max );
-	const double threshold = eigen_value_max * threshold_condition_number;
+	const RI::Global_Func::To_Real_t<Tdata> threshold = eigen_value_max * threshold_condition_number;
 
-	ModuleBase::matrix eA( A.nr, A.nc );
+	RI::Tensor<Tdata> eA( this->A.shape );
 	int ie=0;
-	for( int i=0; i!=A.nr; ++i )
+	for( int i=0; i!=this->A.shape[1]; ++i )
 		if( eigen_value[i] > threshold )
 		{
-			BlasConnector::axpy( A.nc, sqrt(1.0/eigen_value[i]), A.c+i*A.nc,1, eA.c+ie*eA.nc,1 );
+			RI::Blas_Interface::axpy( this->A.shape[1], Tdata(std::sqrt(1.0/eigen_value[i])), this->A.ptr()+i*this->A.shape[1], eA.ptr()+ie*eA.shape[1] );
 			++ie;
 		}
-	BlasConnector::gemm( 'T','N', eA.nc,eA.nc,ie, 1, eA.c,eA.nc, eA.c,eA.nc, 0, A.c,A.nc );
+	this->A = RI::Blas_Interface::gemm('T', 'N', Tdata(1), eA, eA);
 }
-*/
 
 template<typename Tdata>
 void Inverse_Matrix<Tdata>::input( const RI::Tensor<Tdata> &m )
@@ -151,9 +157,9 @@ Inverse_Matrix<Tdata>::output(const std::vector<size_t> &n0, const std::vector<s
 template<typename Tdata>
 void Inverse_Matrix<Tdata>::copy_down_triangle()
 {
-	for( size_t i0=0; i0<A.shape[0]; ++i0 )
+	for( size_t i0=0; i0<this->A.shape[0]; ++i0 )
 		for( size_t i1=0; i1<i0; ++i1 )
-			A(i0,i1) = A(i1,i0);
+			this->A(i0,i1) = this->A(i1,i0);
 }
 
 #endif

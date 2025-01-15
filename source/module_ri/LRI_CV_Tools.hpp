@@ -17,7 +17,7 @@ LRI_CV_Tools::cal_I( const RI::Tensor<Tdata> &m )
 {
 	Inverse_Matrix<Tdata> I;
 	I.input(m);
-	I.cal_inverse( Inverse_Matrix<Tdata>::Method::potrf );
+	I.cal_inverse( Inverse_Matrix<Tdata>::Method::heev );
 	return I.output();
 }
 
@@ -27,7 +27,7 @@ LRI_CV_Tools::cal_I( const std::vector<std::vector<RI::Tensor<Tdata>>> &ms )
 {
 	Inverse_Matrix<Tdata> I;
 	I.input(ms);
-	I.cal_inverse( Inverse_Matrix<Tdata>::Method::potrf );
+	I.cal_inverse( Inverse_Matrix<Tdata>::Method::heev );
 	return I.output({ms[0][0].shape[0], ms[1][0].shape[0]}, {ms[0][0].shape[1], ms[0][1].shape[1]});
 }
 

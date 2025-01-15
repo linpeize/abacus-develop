@@ -12,7 +12,7 @@ template<typename Tdata>
 class Inverse_Matrix
 {
 public:
-	enum class Method{potrf};	//, syev};
+	enum class Method{potrf, heev};
 	void cal_inverse(const Method &method);
 
 	void input(const RI::Tensor<Tdata> &m);
@@ -22,6 +22,7 @@ public:
 
 private:
 	void using_potrf();
+	void using_heev( const RI::Global_Func::To_Real_t<Tdata> &threshold_condition_number );
 	void copy_down_triangle();
 	RI::Tensor<Tdata> A;
 };
