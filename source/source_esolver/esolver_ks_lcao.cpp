@@ -20,6 +20,8 @@
 #include "source_io/ctrl_runner_lcao.h" // use ctrl_runner_lcao() 
 #include "source_io/ctrl_iter_lcao.h" // use ctrl_iter_lcao() 
 
+#include "source_io/numerical_basis_nao.h"
+
 namespace ModuleESolver
 {
 
@@ -279,6 +281,12 @@ void ESolver_KS_LCAO<TK, TR>::after_all_runners(UnitCell& ucell)
 	if(!hamilt_lcao)
 	{
 		ModuleBase::WARNING_QUIT("ESolver_KS_LCAO::after_all_runners","p_hamilt does not exist");
+	}
+
+	if(false)
+	{
+		Numerical_Basis_Nao<TK,TR> numerical_basis_nao(ucell, this->kv, this->pv, *this->psi, *dynamic_cast<hamilt::HamiltLCAO<TK,TR>*>(this->p_hamilt), *this);
+		numerical_basis_nao.output_overlap();
 	}
 
 	ModuleIO::ctrl_runner_lcao<TK, TR>(ucell,

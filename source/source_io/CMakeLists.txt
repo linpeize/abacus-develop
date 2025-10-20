@@ -14,6 +14,7 @@ list(APPEND objects
     write_eig_occ.cpp
     numerical_basis.cpp
     numerical_basis_jyjy.cpp
+    numerical_basis_nao.cpp
     numerical_descriptor.cpp
     output.cpp
     print_info.cpp
