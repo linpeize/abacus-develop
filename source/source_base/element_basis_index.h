@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <map>
 
 namespace ModuleBase
 {
@@ -42,8 +43,11 @@ namespace Element_Basis_Index
 	typedef std::vector<Index_T> IndexLNM;								// index[T][L][N][M]
 
 	extern IndexLNM construct_index( const Range &range );
+	template<typename Tkey> extern std::map<Tkey, Index_T> construct_index( const std::map<Tkey, std::vector<NM>> &range );
 }
 
 }
+
+#include "element_basis_index.hpp"
 
 #endif

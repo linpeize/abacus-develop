@@ -37,8 +37,8 @@ public:
 		const UnitCell &ucell,
         const LCAO_Orbitals& orb,
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &lcaos_in,
-		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
-		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
+		const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
+		const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
 		const double &kmesh_times,
 		ORB_gaunt_table& MGT,
         const bool& init_MGT,
@@ -63,16 +63,16 @@ public:
 		const std::vector<TAC> &list_A1,
 		const std::map<std::string,bool> &flags);						// "cal_dC", "writable_Cws", "writable_dCws", "writable_Vws", "writable_dVws"
 	
-	size_t get_index_abfs_size(const size_t &iat){return this->index_abfs[iat].count_size; }
+	size_t get_index_abfs_size(const std::string &iat){return this->index_abfs[iat].count_size; }
 
 private:
 	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> lcaos;
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
-	std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
+	std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
+	std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> abfs_ccp;
 	ModuleBase::Element_Basis_Index::IndexLNM index_lcaos;
-	ModuleBase::Element_Basis_Index::IndexLNM index_abfs;
+	std::map<std::string, ModuleBase::Element_Basis_Index::Index_T> index_abfs;
 	std::vector<double> lcaos_rcut;
-    std::vector<double> abfs_ccp_rcut;
+    std::map<std::string, double> abfs_ccp_rcut;
 
 public:
 	std::map<int,std::map<int,std::map<Abfs::Vector3_Order<double>,RI::Tensor<Tdata>>>> Vws;

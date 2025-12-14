@@ -41,8 +41,8 @@ void LRI_CV<Tdata>::set_orbitals(
 	const UnitCell &ucell,
 	const LCAO_Orbitals& orb,
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &lcaos_in,
-	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
-	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
+	const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_in,
+	const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_ccp_in,
 	const double &kmesh_times,
 	ORB_gaunt_table& MGT,
     const bool& init_MGT,
@@ -65,7 +65,7 @@ void LRI_CV<Tdata>::set_orbitals(
 		range_lcaos = ModuleBase::Element_Basis_Index::construct_range( lcaos );
 	this->index_lcaos = ModuleBase::Element_Basis_Index::construct_index( range_lcaos );
 
-	const ModuleBase::Element_Basis_Index::Range
+	const std::map<std::string, std::vector<ModuleBase::Element_Basis_Index::NM>>
 		range_abfs = ModuleBase::Element_Basis_Index::construct_range( abfs );
 	this->index_abfs = ModuleBase::Element_Basis_Index::construct_index( range_abfs );
 

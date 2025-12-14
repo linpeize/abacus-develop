@@ -8,32 +8,37 @@
 namespace ModuleBase
 {
 
+Element_Basis_Index::Index_T
+Element_Basis_Index::construct_index( const std::vector<NM> &range )
+{
+	Index_T index;
+	std::size_t count=0;
+	index.resize( range.size() );
+	for( std::size_t L=0; L!=range.size(); ++L )
+	{
+		index[L].resize( range[L].N );
+		for( std::size_t N=0; N!=range[L].N; ++N )
+		{
+			index[L][N].resize( range[L].M );
+			for( std::size_t M=0; M!=range[L].M; ++M )
+			{
+				index[L][N][M] = count;
+				++count;
+			}
+		}
+		index[L].N = range[L].N;
+		index[L].M = range[L].M;
+	}
+	index.count_size = count;
+	return index;
+}
+
 Element_Basis_Index::IndexLNM
 Element_Basis_Index::construct_index( const Range &range )
 {
-	IndexLNM index;
-	index.resize( range.size() );
+	IndexLNM index(range.size());
 	for( std::size_t T=0; T!=range.size(); ++T )
-	{
-		std::size_t count=0;
-		index[T].resize( range[T].size() );
-		for( std::size_t L=0; L!=range[T].size(); ++L )
-		{
-			index[T][L].resize( range[T][L].N );
-			for( std::size_t N=0; N!=range[T][L].N; ++N )
-			{
-				index[T][L][N].resize( range[T][L].M );
-				for( std::size_t M=0; M!=range[T][L].M; ++M )
-				{
-					index[T][L][N][M] = count;
-					++count;
-				}
-			}
-			index[T][L].N = range[T][L].N;
-			index[T][L].M = range[T][L].M;
-		}
-		index[T].count_size = count;
-	}
+		{ index[T] = construct_index(range[T]); }
 	return index;
 }
 

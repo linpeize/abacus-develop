@@ -22,6 +22,18 @@ namespace Conv_Coulomb_Pot_K
 	}
 
 	template< typename T >
+	std::map<std::string, T> cal_orbs_ccp(
+		const std::map<std::string, T> & orbs,
+		const std::map<Conv_Coulomb_Pot_K::Coulomb_Type, std::vector<std::map<std::string,std::string>>> &coulomb_param,
+		const double rmesh_times)
+	{
+		std::map<std::string, T> orbs_ccp(orbs.size());
+		for( const auto &orbs_T : orbs )
+			orbs_ccp[orbs_T.first] = cal_orbs_ccp(orbs_T.second, coulomb_param, rmesh_times);
+		return orbs_ccp;
+	}
+
+	template< typename T >
 	double get_rmesh_proportion(
 		const std::vector<T> & orbs,
 		const double psi_threshold)

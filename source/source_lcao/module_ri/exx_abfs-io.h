@@ -29,6 +29,17 @@ public:
 		const LCAO_Orbitals &orbs,
 		const std::vector<std::string> &files_abfs,
 		const double kmesh_times=1 );				// close dK, keep Kcut
+		
+	static std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> construct_abfs( 
+		const LCAO_Orbitals &orbs,
+		const std::map<std::string, std::string> &files_abfs,
+		const double kmesh_times=1 );				// close dK, keep Kcut	
+		
+	static std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> construct_abfs( 
+		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs_pre, 	
+		const LCAO_Orbitals &orbs,
+		const std::map<std::string, std::string> &files_abfs,
+		const double kmesh_times=1 );				// close dK, keep Kcut
 
 private:
 	static std::vector<std::vector<Numerical_Orbital_Lm>> construct_abfs_T(

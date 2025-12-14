@@ -473,21 +473,21 @@ inline const Numerical_Orbital_Lm &Exx_Abfs::Construct_Orbs::get_orbital(
 
 void Exx_Abfs::Construct_Orbs::print_orbs_size(
 	const UnitCell& ucell,
-	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
+	const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
 	std::ostream &os)
 {
 	os<<" Auxiliary basis functions"<<std::endl;
 	const std::vector<char> L_labels = {'s', 'p', 'd'};
-	for(std::size_t T=0; T<orbs.size(); ++T)
+	for(const auto &orbs_T : orbs)
 	{
-		os<<"\t\t"<<ucell.atoms[T].label<<"\t\t";
-		for(std::size_t L=0; L<orbs[T].size(); ++L)
+		os<<"\t\t"<<orbs_T.first<<"\t\t";
+		for(std::size_t L=0; L<orbs_T.second.size(); ++L)
 		{
 			const char L_label =
 				L < L_labels.size()
 				? L_labels[L]
 				: 'f' + (L-L_labels.size());
-			os<<orbs[T][L].size()<<" "<<L_label<<"\t\t";
+			os<<orbs_T.second[L].size()<<" "<<L_label<<"\t\t";
 		}
 		os<<std::endl;
 	}
@@ -520,24 +520,34 @@ std::vector<std::vector<std::vector<double>>> Exx_Abfs::Construct_Orbs::get_mult
     return multipole;
 }
 
+double Exx_Abfs::Construct_Orbs::get_Rcut(const std::vector<std::vector<Numerical_Orbital_Lm>>& orb_in)
+{
+    double rmax = std::numeric_limits<double>::min();
+    for (size_t L = 0; L != orb_in.size(); ++L)
+    {
+        for (size_t N = 0; N != orb_in[L].size(); ++N)
+        {
+            const double rcut = orb_in[L][N].getRcut();
+            if (rcut > rmax)
+                rmax = rcut;
+        }
+    }
+    return rmax;
+}
+
 std::vector<double> Exx_Abfs::Construct_Orbs::get_Rcut(const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_in)
 {
     std::vector<double> Rcut(orb_in.size());
     for (size_t T = 0; T != orb_in.size(); ++T)
-    {
-        double rmax = std::numeric_limits<double>::min();
-        for (size_t L = 0; L != orb_in[T].size(); ++L)
-        {
-            for (size_t N = 0; N != orb_in[T][L].size(); ++N)
-            {
-                const double rcut = orb_in[T][L][N].getRcut();
-                if (rcut > rmax)
-                    rmax = rcut;
-            }
-        }
-        Rcut[T] = rmax;
-    }
+    	{ Rcut[T] = get_Rcut(orb_in[T]); }
+    return Rcut;
+}
 
+std::map<std::string,double> Exx_Abfs::Construct_Orbs::get_Rcut(const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>>& orb_in)
+{
+    std::map<std::string, double> Rcut(orb_in.size());
+    for (const auto &orb_in_T : orb_in)
+    	{ Rcut[orb_in_T.first] = get_Rcut(orb_in_T.second); }
     return Rcut;
 }
 

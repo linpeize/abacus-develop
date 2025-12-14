@@ -44,17 +44,25 @@ public:
         const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
             orb_in);
 
+    static double get_Rcut(
+        const std::vector<std::vector<Numerical_Orbital_Lm>> &orb_in);
     static std::vector<double> get_Rcut(
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            orb_in);
-    static inline double get_Rmax(const std::vector<double>& rcut) {
+        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in);
+    static std::map<std::string, double> get_Rcut(
+        const std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> &orb_in);
+
+    static double get_Rmax(const std::vector<double>& rcut)
+    {
         return *std::max_element(rcut.begin(), rcut.end());
     }
-    static inline double get_Rmax(
-        const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>&
-            orb_in) {
-        std::vector<double> rcut = get_Rcut(orb_in);
-        return get_Rmax(rcut);
+    template<typename Tkey> static double get_Rmax(const std::map<Tkey, double>& rcut)
+    {
+        return *std::max_element(rcut.begin(), rcut.end(),
+			[](const std::pair<Tkey,double> a, const std::pair<Tkey,double> b) { return a.second < b.second; });
+    }
+    template<typename T> static double get_Rmax(const T &orb_in)
+	{
+        return get_Rmax(get_Rcut(orb_in));
     }
 
 	static void filter_empty_orbs(

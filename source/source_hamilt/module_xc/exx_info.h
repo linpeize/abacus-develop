@@ -57,6 +57,7 @@ struct Exx_Info
 
         double pca_threshold = 0;
         std::vector<std::string> files_abfs;
+        std::map<std::string, std::string> files_abfs_group;
         double C_threshold = 0;
         double V_threshold = 0;
         double dm_threshold = 0;

@@ -28,6 +28,24 @@ std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::IO::constr
 	return abfs;
 }
 
+std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::IO::construct_abfs(
+	const LCAO_Orbitals &orbs,
+	const std::map<std::string, std::string> &files_abfs,
+	const double kmesh_times )
+{
+	std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> abfs;
+	for( const auto &file_abfs : files_abfs)
+		abfs[file_abfs.first] = construct_abfs_T( 
+			file_abfs.second,
+			file_abfs.first,
+			static_cast<int>(orbs.get_kmesh() * kmesh_times) | 1,			// Nk must be odd
+//			orbs.get_dk() / kmesh_times,
+			orbs.get_dk(),								// Peize Lin change 2017-04-16
+			orbs.get_dr_uniform() );		
+	
+	return abfs;
+}
+
 std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::IO::construct_abfs( 
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> & abfs_pre,
 	const LCAO_Orbitals &orbs,
@@ -45,6 +63,29 @@ std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::IO::constr
 		for( size_t L=0; L!=abfs_pre[T].size(); ++L )
 		{
 			abfs[T][L].insert( abfs[T][L].begin(), abfs_pre[T][L].begin(), abfs_pre[T][L].end() );
+		}
+	}	
+	
+	return abfs;
+}
+
+std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::IO::construct_abfs( 
+	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> & abfs_pre,
+	const LCAO_Orbitals &orbs,
+	const std::map<std::string, std::string> &files_abfs,
+	const double kmesh_times )
+{
+	std::map<std::string, std::vector<std::vector<Numerical_Orbital_Lm>>> 
+		abfs = construct_abfs( orbs, files_abfs, kmesh_times );
+
+	for( size_t T=0; T!=abfs_pre.size(); ++T )
+	{
+		auto &abfs_T = abfs[std::to_string(T)];
+		if( abfs_T.size() < abfs_pre[T].size() )
+			abfs_T.resize( abfs_pre[T].size() );
+		for( size_t L=0; L!=abfs_pre[T].size(); ++L )
+		{
+			abfs_T[L].insert( abfs_T[L].begin(), abfs_pre[T][L].begin(), abfs_pre[T][L].end() );
 		}
 	}	
 	
