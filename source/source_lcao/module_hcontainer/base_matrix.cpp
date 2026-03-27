@@ -49,8 +49,16 @@ BaseMatrix<T>::BaseMatrix(const BaseMatrix<T>& matrix)
     }
     else
     {
-        this->value_begin = matrix.value_begin;
-        this->allocated = false;
+        this->value_begin = new T[nrow_local * ncol_local];
+        ModuleBase::GlobalFunc::ZEROS(this->value_begin, nrow_local * ncol_local);
+        this->allocated = true;
+        if (matrix.value_begin != nullptr)
+        {
+            for (int i = 0; i < nrow_local * ncol_local; i++)
+            {
+                this->value_begin[i] = matrix.value_begin[i];
+            }
+        }
     }
 }
 

@@ -193,7 +193,12 @@ AtomPair<T>::AtomPair(const AtomPair<T>& other, T* data_pointer)
 {
     if(data_pointer == nullptr)
     {
-        this->values = other.values;
+        this->values.reserve(other.values.size());
+        for(int value=0;value<other.values.size();++value)
+        {
+            BaseMatrix<T> tmp(other.values[value]);
+            this->values.push_back(tmp);
+        }
     }
     else
     {
