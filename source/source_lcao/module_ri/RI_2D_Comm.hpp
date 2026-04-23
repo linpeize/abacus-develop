@@ -19,6 +19,9 @@
 #include <RI/global/Global_Func-2.h>
 
 #include <cmath>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <string>
 #include <stdexcept>
 
@@ -31,6 +34,7 @@ inline RI::Tensor<std::complex<double>> tensor_conj(const RI::Tensor<std::comple
     }
     return r;
 }
+
 template<typename Tdata, typename Tmatrix>
 auto RI_2D_Comm::split_m2D_ktoR(const UnitCell& ucell,
                                 const K_Vectors & kv, 
@@ -46,77 +50,137 @@ auto RI_2D_Comm::split_m2D_ktoR(const UnitCell& ucell,
 	const TC period = RI_Util::get_Born_vonKarmen_period(kv);
 	const std::map<int,int> nspin_k = {{1,1}, {2,2}, {4,1}};
     const double SPIN_multiple = std::map<int, double>{ {1,0.5}, {2,1}, {4,1} }.at(nspin);							// why?
-
+    const bool is_column_major = ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER(PARAM.inp.ks_solver);
+    const std::vector<TC> born_von_karmen_cells = RI_Util::get_Born_von_Karmen_cells(period);
+    #ifdef _OPENMP
+    const int max_threads = omp_get_max_threads();
+    #else
+    const int max_threads = 1;
+    #endif
     std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> mRs_a2D(nspin);
-    for (int is_k = 0; is_k < nspin_k.at(nspin); ++is_k)
-	{
-		const std::vector<int> ik_list = RI_2D_Comm::get_ik_list(kv, is_k);
-		for(const TC &cell : RI_Util::get_Born_von_Karmen_cells(period))
-		{
-            RI::Tensor<Tdata> mR_2D;
-            int ik_full = 0;
-            for (const int ik : ik_list)
+
+    auto build_mR_2D = [&](const int is_k, const std::vector<int>& ik_list, const TC& cell)
+    {
+        RI::Tensor<Tdata> mR_2D;
+        int ik_full = 0;
+        for (const int ik : ik_list)
+        {
+            auto set_mR_2D = [&mR_2D](auto&& mk_frac)
             {
-                auto set_mR_2D = [&mR_2D](auto&& mk_frac) {
-                    if (mR_2D.empty()) {
-                        mR_2D = RI::Global_Func::convert<Tdata>(mk_frac);
-                    } else {
-                        mR_2D
-                            = mR_2D + RI::Global_Func::convert<Tdata>(mk_frac);
-                    }
-                };
-                using Tdata_m = typename Tmatrix::value_type;
-                if (!spgsym)
+                if (mR_2D.empty())
+                    { mR_2D = RI::Global_Func::convert<Tdata>(mk_frac); }
+                else
+                    { mR_2D = mR_2D + RI::Global_Func::convert<Tdata>(mk_frac); }
+            };
+            using Tdata_m = typename Tmatrix::value_type;
+            if (!spgsym)
+            {
+                RI::Tensor<Tdata_m> mk_2D = RI_Util::Vector_to_Tensor<Tdata_m>(*mks_2D[ik], pv.get_col_size(), pv.get_row_size());
+                const Tdata_m frac = SPIN_multiple
+                    * RI::Global_Func::convert<Tdata_m>(std::exp(
+                        -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell) * ucell.latvec))));
+                if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.get_nkstot_full())) == 2)
+                    { set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5))); }
+                else { set_mR_2D(mk_2D * frac); }
+            }
+            else
+            { // traverse kstar, ik means ik_ibz
+                for (auto& isym_kvd : kv.kstars[ik % ik_list.size()])
                 {
-                    RI::Tensor<Tdata_m> mk_2D = RI_Util::Vector_to_Tensor<Tdata_m>(*mks_2D[ik], pv.get_col_size(), pv.get_row_size());
+                    RI::Tensor<Tdata_m> mk_2D = RI_Util::Vector_to_Tensor<Tdata_m>(*mks_2D[ik_full + is_k * kv.get_nkstot_full()], pv.get_col_size(), pv.get_row_size());
                     const Tdata_m frac = SPIN_multiple
                         * RI::Global_Func::convert<Tdata_m>(std::exp(
-                            -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * (kv.kvec_c[ik] * (RI_Util::array3_to_Vector3(cell) * ucell.latvec))));
-                    if (static_cast<int>(std::round(SPIN_multiple * kv.wk[ik] * kv.get_nkstot_full())) == 2)
-                        { set_mR_2D(mk_2D * (frac * 0.5) + tensor_conj(mk_2D * (frac * 0.5))); }
-                    else { set_mR_2D(mk_2D * frac); }
-                }
-                else
-                { // traverse kstar, ik means ik_ibz
-                    for (auto& isym_kvd : kv.kstars[ik % ik_list.size()])
-                    {
-                        RI::Tensor<Tdata_m> mk_2D = RI_Util::Vector_to_Tensor<Tdata_m>(*mks_2D[ik_full + is_k * kv.get_nkstot_full()], pv.get_col_size(), pv.get_row_size());
-                        const Tdata_m frac = SPIN_multiple
-                            * RI::Global_Func::convert<Tdata_m>(std::exp(
-                                -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * ((isym_kvd.second * ucell.G) * (RI_Util::array3_to_Vector3(cell) * ucell.latvec))));
-                        set_mR_2D(mk_2D * frac);
-                        ++ik_full;
-                    }
+                            -ModuleBase::TWO_PI * ModuleBase::IMAG_UNIT * ((isym_kvd.second * ucell.G) * (RI_Util::array3_to_Vector3(cell) * ucell.latvec))));
+                    set_mR_2D(mk_2D * frac);
+                    ++ik_full;
                 }
             }
-			for(int iwt0_2D=0; iwt0_2D!=mR_2D.shape[0]; ++iwt0_2D)
-			{
-				const int iwt0 =ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER(PARAM.inp.ks_solver)
-                    ? pv.local2global_col(iwt0_2D)
-                    : pv.local2global_row(iwt0_2D);
-				int iat0, iw0_b, is0_b;
-				std::tie(iat0,iw0_b,is0_b) = RI_2D_Comm::get_iat_iw_is_block(ucell,iwt0);
-				const int it0 = ucell.iat2it[iat0];
-				for(int iwt1_2D=0; iwt1_2D!=mR_2D.shape[1]; ++iwt1_2D)
-				{
-					const int iwt1 =ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER(PARAM.inp.ks_solver)
-                        ? pv.local2global_row(iwt1_2D)
-                        : pv.local2global_col(iwt1_2D);
-					int iat1, iw1_b, is1_b;
-					std::tie(iat1,iw1_b,is1_b) = RI_2D_Comm::get_iat_iw_is_block(ucell,iwt1);
-					const int it1 = ucell.iat2it[iat1];
+        }
+        return mR_2D;
+    };
+    auto add_mR_2D_rows = [&](auto& mRs_dst,
+                              const int is_k,
+                              const TC& cell,
+                              const RI::Tensor<Tdata>& mR_2D,
+                              const int row_begin,
+                              const int row_end)
+    {
+        for (int iwt0_2D = row_begin; iwt0_2D < row_end; ++iwt0_2D)
+        {
+            const int iwt0 = is_column_major
+                ? pv.local2global_col(iwt0_2D)
+                : pv.local2global_row(iwt0_2D);
+            int iat0, iw0_b, is0_b;
+            std::tie(iat0,iw0_b,is0_b) = RI_2D_Comm::get_iat_iw_is_block(ucell,iwt0);
+            const int it0 = ucell.iat2it[iat0];
+            for(int iwt1_2D=0; iwt1_2D!=mR_2D.shape[1]; ++iwt1_2D)
+            {
+                const int iwt1 = is_column_major
+                    ? pv.local2global_row(iwt1_2D)
+                    : pv.local2global_col(iwt1_2D);
+                int iat1, iw1_b, is1_b;
+                std::tie(iat1,iw1_b,is1_b) = RI_2D_Comm::get_iat_iw_is_block(ucell,iwt1);
+                const int it1 = ucell.iat2it[iat1];
 
-					const int is_b = RI_2D_Comm::get_is_block(is_k, is0_b, is1_b);
-					RI::Tensor<Tdata> &mR_a2D = mRs_a2D[is_b][iat0][{iat1,cell}];
-                    if (mR_a2D.empty()) {
-                        mR_a2D = RI::Tensor<Tdata>(
-                            {static_cast<size_t>(ucell.atoms[it0].nw),
-                             static_cast<size_t>(
-                                 ucell.atoms[it1].nw)});
-                    }
-                    mR_a2D(iw0_b,iw1_b) = mR_2D(iwt0_2D, iwt1_2D);
-				}
-			}
+                const int is_b = RI_2D_Comm::get_is_block(is_k, is0_b, is1_b);
+                RI::Tensor<Tdata> &mR_a2D = mRs_dst[is_b][iat0][{iat1,cell}];
+                if (mR_a2D.empty())
+                {
+                    mR_a2D = RI::Tensor<Tdata>(
+                        {static_cast<size_t>(ucell.atoms[it0].nw),
+                         static_cast<size_t>(
+                             ucell.atoms[it1].nw)});
+                }
+                mR_a2D(iw0_b,iw1_b) = mR_2D(iwt0_2D, iwt1_2D);
+            }
+        }
+    };
+    auto merge_local_results = [&](auto& mRs_local)
+    {
+        #pragma omp critical(RI_2D_Comm_split_m2D_ktoR_merge)
+        for (int is_b = 0; is_b < nspin; ++is_b)
+            { RI_2D_Comm::add_datas(std::move(mRs_local[is_b]), mRs_a2D[is_b]); }
+    };
+
+    for (int is_k = 0; is_k < nspin_k.at(nspin); ++is_k)
+    {
+        const std::vector<int> ik_list = RI_2D_Comm::get_ik_list(kv, is_k);
+        const bool use_row_parallel = max_threads > 1 && born_von_karmen_cells.size() == 1;
+        // For ncell > 1, keep cell-parallel work sharing so the expensive k->R build
+        // phase is also distributed across threads. Row-parallel fallback is reserved
+        // for the single-cell case where cell-parallelism would otherwise be idle.
+        if (use_row_parallel)
+        {
+            const RI::Tensor<Tdata> mR_2D = build_mR_2D(is_k, ik_list, born_von_karmen_cells.front());
+            #pragma omp parallel
+            {
+                std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> mRs_a2D_local(nspin);
+                #pragma omp for schedule(static)
+                for (int iwt0_2D = 0; iwt0_2D < static_cast<int>(mR_2D.shape[0]); ++iwt0_2D)
+                    { add_mR_2D_rows(mRs_a2D_local, is_k, born_von_karmen_cells.front(), mR_2D, iwt0_2D, iwt0_2D + 1); }
+                merge_local_results(mRs_a2D_local);
+            }
+        }
+        else
+        {
+            #pragma omp parallel
+            {
+                std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> mRs_a2D_local(nspin);
+                #pragma omp for schedule(dynamic)
+                for (int icell = 0; icell < static_cast<int>(born_von_karmen_cells.size()); ++icell)
+                {
+                    const TC& cell = born_von_karmen_cells[icell];
+                    const RI::Tensor<Tdata> mR_2D = build_mR_2D(is_k, ik_list, cell);
+                    add_mR_2D_rows(
+                        mRs_a2D_local,
+                        is_k,
+                        cell,
+                        mR_2D,
+                        0,
+                        static_cast<int>(mR_2D.shape[0]));
+                }
+                merge_local_results(mRs_a2D_local);
+            }
         }
     }
 	ModuleBase::timer::end("RI_2D_Comm", "split_m2D_ktoR");
