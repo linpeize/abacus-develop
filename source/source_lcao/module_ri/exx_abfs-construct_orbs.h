@@ -25,7 +25,7 @@ public:
 		const LCAO_Orbitals& orb,
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &lcaos,
 		const double kmesh_times_mot,
-		const double times_threshold=0);
+		const std::vector<double>& times_threshold);
 		
 	static void print_orbs_size(
 		const UnitCell& ucell,
@@ -84,7 +84,7 @@ public:
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs,
 		const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
 		const double kmesh_times_mot,
-		const double times_threshold );
+		const std::vector<double>& times_threshold );
 		
 	static std::vector<std::vector<std::vector<std::vector<double>>>> div_r( 
 		const std::vector<std::vector<std::vector<std::vector<double>>>> &psirs,

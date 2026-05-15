@@ -56,7 +56,7 @@ struct Exx_Info
         bool coul_moment = false;
         bool rotate_abfs = false;
 
-        double pca_threshold = 0;
+        std::vector<double> pca_threshold = {0};
         std::vector<std::string> files_abfs;
         std::vector<std::string> files_shrink_abfs;
         double C_threshold = 0;
@@ -92,7 +92,7 @@ struct Exx_Info
         double tolerence = 1E-12;
         std::vector<std::string> files_jles;
 
-        double pca_threshold = 0;
+        std::vector<double> pca_threshold = {0};
         std::vector<std::string> files_abfs;
 
         double kmesh_times = 4;

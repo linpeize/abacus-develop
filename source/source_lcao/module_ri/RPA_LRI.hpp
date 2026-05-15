@@ -52,7 +52,12 @@ void RPA_LRI<T, Tdata>::postSCF(const UnitCell& ucell,
     this->out_eigen_vector(parav, psi);
     this->out_struc(ucell);
 
-    std::cout << "rpa_pca_threshold: " << this->info.pca_threshold << std::endl;
+    std::cout << "rpa_pca_threshold:";
+    for (const double value: this->info.pca_threshold)
+    {
+        std::cout << " " << value;
+    }
+    std::cout << std::endl;
     std::cout << "rpa_ccp_rmesh_times: " << this->info.ccp_rmesh_times << std::endl;
     std::cout << "rpa_lcao_exx(Ha): " << std::fixed << std::setprecision(15) << exx_cut_coulomb->Eexx / 2.0 << std::endl;
 
@@ -162,7 +167,7 @@ void RPA_LRI<T, Tdata>::cal_postSCF_exx(const elecstate::DensityMatrix<T, Tdata>
                                                        orb,
                                                        this->lcaos,
                                                        this->info.kmesh_times,
-                                                       this->info.shrink_abfs_pca_thr);
+                                                       std::vector<double>(ucell.ntype, this->info.shrink_abfs_pca_thr));
         if (this->info.files_shrink_abfs.empty())
         {
             this->abfs_shrink = abfs_same_atom;

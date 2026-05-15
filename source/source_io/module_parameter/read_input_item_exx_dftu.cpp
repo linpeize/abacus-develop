@@ -245,12 +245,20 @@ void ReadInput::item_exx()
         Input_Item item("exx_pca_threshold");
         item.annotation = "threshold to screen on-site ABFs in exx";
         item.category = "Exact Exchange (LCAO)";
-        item.type = "Real";
+        item.type = "Vector of Real (n values where n is the number of atomic types)";
         item.description = "To accelerate the evaluation of four-center integrals (), the product of atomic orbitals are expanded in the basis of auxiliary basis functions (ABF): . The size of the ABF (i.e. number of ) is reduced using principal component analysis. When a large PCA threshold is used, the number of ABF will be reduced, hence the calculation becomes faster. However, this comes at the cost of computational accuracy. A relatively safe choice of the value is 1e-4.";
         item.default_value = "1E-4";
         item.unit = "";
         item.availability = "";
-        read_sync_double(input.exx_pca_threshold);
+        item.read_value = [](const Input_Item& item, Parameter& para) {
+            para.input.exx_pca_threshold.clear();
+            size_t count = item.get_size();
+            for (int i = 0; i < count; i++)
+            {
+                para.input.exx_pca_threshold.push_back(std::stod(item.str_values[i]));
+            }
+        };
+        sync_doublevec(input.exx_pca_threshold, para.input.ntype, 0.0001);
         this->add_item(item);
     }
     {

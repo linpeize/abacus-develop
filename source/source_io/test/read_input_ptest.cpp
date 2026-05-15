@@ -288,7 +288,8 @@ TEST_F(InputParaTest, ParaRead)
     EXPECT_EQ(param.inp.exx_hybrid_step, 100);
     EXPECT_DOUBLE_EQ(std::stod(param.inp.exx_fock_lambda[0]), 0.3);
     EXPECT_DOUBLE_EQ(param.inp.exx_mixing_beta, 1.0);
-    EXPECT_DOUBLE_EQ(param.inp.exx_pca_threshold, 0);
+    ASSERT_EQ(param.inp.exx_pca_threshold.size(), 1);
+    EXPECT_DOUBLE_EQ(param.inp.exx_pca_threshold[0], 0);
     EXPECT_DOUBLE_EQ(param.inp.exx_c_threshold, 0);
     EXPECT_DOUBLE_EQ(param.inp.exx_v_threshold, 0);
     EXPECT_DOUBLE_EQ(param.inp.exx_dm_threshold, 0);

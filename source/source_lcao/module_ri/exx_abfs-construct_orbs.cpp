@@ -82,10 +82,10 @@ std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> Exx_Abfs::Construct_
     const LCAO_Orbitals& orb,
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
 	const double kmesh_times_mot,
-	const double times_threshold )
+	const std::vector<double>& times_threshold )
 {
 	ModuleBase::TITLE("Exx_Abfs::Construct_Orbs::abfs_same_atom");
-	if(times_threshold>1)
+	if(std::all_of(times_threshold.begin(), times_threshold.end(), [](const double value) { return value > 1; }))
 		{ return std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>>(orb.get_ntype()); }
 
 	const std::vector<std::vector<std::vector<std::vector<double>>>>
@@ -265,9 +265,9 @@ std::vector<std::vector<std::vector<std::vector<double>>>> Exx_Abfs::Construct_O
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &abfs,
 	const std::vector<std::vector<std::vector<Numerical_Orbital_Lm>>> &orbs,
 	const double kmesh_times_mot,
-	const double times_threshold )
+	const std::vector<double>& times_threshold )
 {
-	if(times_threshold>1)
+	if(std::all_of(times_threshold.begin(), times_threshold.end(), [](const double value) { return value > 1; }))
 		return std::vector<std::vector<std::vector<std::vector<double>>>>(abfs.size());
 
 	const std::vector<std::vector<std::pair<std::vector<double>,RI::Tensor<double>>>>
@@ -276,6 +276,7 @@ std::vector<std::vector<std::vector<std::vector<double>>>> Exx_Abfs::Construct_O
 	const std::vector<std::vector<std::vector<std::vector<double>>>> psis = get_psi( abfs );
 	std::vector<std::vector<std::vector<std::vector<double>>>> psis_new( psis.size() );
 
+	assert(times_threshold.size() == eig.size());
 	for( size_t T=0; T!=eig.size(); ++T )
 	{
 		double eig_value_max = 0;
@@ -285,7 +286,7 @@ std::vector<std::vector<std::vector<std::vector<double>>>> Exx_Abfs::Construct_O
 //ofs<<T<<"\t"<<L<<"\t"<<M<<"\t"<<eig[T][L].first[M]<<std::endl;
 				eig_value_max = std::max( eig_value_max, eig[T][L].first[M] );
 			}
-		const double eig_value_threshold = eig_value_max * times_threshold;
+			const double eig_value_threshold = eig_value_max * times_threshold[T];
 
 //ofs<<"eig_value_max:\t"<<eig_value_max<<std::endl;
 //ofs<<"eig_value_threshold:\t"<<eig_value_threshold<<std::endl;
