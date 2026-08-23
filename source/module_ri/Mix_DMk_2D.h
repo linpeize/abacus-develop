@@ -8,6 +8,7 @@
 
 #include "module_base/module_mixing/mixing.h"
 
+#include <cstddef>
 #include <complex>
 #include <vector>
 
@@ -31,9 +32,9 @@ public:
 
 	/**
 	 * @brief Sets Base_Mixing::Plain_Mixing.
-	 * @param mixing_beta mixing beta for plain mixing.
+	 * @param mixing_beta Mixing beta for every element in the vector.
 	 */
-	void set_mixing_plain(const double& mixing_beta);
+	void set_mixing_plain(const double mixing_beta);
 
 	/**
 	 * @brief Mixes the density matrix.
@@ -41,6 +42,17 @@ public:
 	 * @param flag_restart Flag indicating whether restart mixing.
 	 */
     void mix(const std::vector<std::vector<Tdata>>& dm, const bool flag_restart);
+
+    /**
+     * @brief Mixes an opaque vector with separate prefix and suffix beta values.
+     * @param dm Data streams in the caller-defined representation.
+     * @param flag_restart Whether to reset and seed the current mixing history.
+     * @param beta_split_index Prefix length using the mixing engine beta. The
+     *                         suffix uses PARAM.inp.mixing_beta_mag.
+     */
+    void mix(const std::vector<std::vector<Tdata>>& dm,
+             bool flag_restart,
+             std::size_t beta_split_index);
 
 	/**
 	 * @brief Returns the density matrix.
@@ -58,6 +70,10 @@ private:
     void restart_all(const std::vector<std::vector<Tdata>>& data_in);
 
     void mix_all(const std::vector<std::vector<Tdata>>& data_in);
+
+    void mix_all(const std::vector<std::vector<Tdata>>& data_in, std::size_t beta_split_index);
+
+    void validate_input(const std::vector<std::vector<Tdata>>& data_in, bool flag_restart) const;
 
     std::vector<DMk_Mix_Data> mix_DMk;
     Base_Mixing::Mixing* mixing = nullptr;

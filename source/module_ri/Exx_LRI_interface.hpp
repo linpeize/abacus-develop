@@ -3,12 +3,15 @@
 #include "module_parameter/parameter.h"
 
 #include "Exx_LRI_interface.h"
+#include "module_ri/DmkSpinTransform.h"
 #include "module_ri/exx_abfs-jle.h"
 #include "module_ri/exx_opt_orb.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/hamilt_lcao.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/operator_lcao/op_exx_lcao.h"
+#include "module_base/global_function.h"
 #include "module_base/parallel_common.h"
 #include "module_base/formatter.h"
+#include "module_base/tool_quit.h"
 
 #include "module_io/csr_reader.h"
 #include "module_io/write_HS_sparse.h"
@@ -17,6 +20,45 @@
 #include <sys/time.h>
 #include <stdexcept>
 #include <string>
+
+namespace Exx_LRI_Interface_Detail
+{
+
+// Runtime nspin dispatch appears in templates instantiated for both real and
+// complex DMK types. These overloads keep the code C++11-compatible and make
+// an invalid real nspin=4 path fail in every build mode.
+inline std::vector<std::vector<std::complex<double>>> to_pauli_nspin4(
+    const std::vector<std::vector<std::complex<double>>>& physical,
+    const Parallel_2D& pv,
+    const bool column_major)
+{
+    return DmkSpinTransform::to_pauli_nspin4(physical, pv, column_major);
+}
+
+inline std::vector<std::vector<double>> to_pauli_nspin4(const std::vector<std::vector<double>>&,
+                                                         const Parallel_2D&,
+                                                         const bool)
+{
+    ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "nspin=4 DMK mixing requires complex matrix data");
+}
+
+inline std::vector<std::vector<std::complex<double>>> to_physical_nspin4(
+    const std::vector<const std::vector<std::complex<double>>*>& pauli,
+    const Parallel_2D& pv,
+    const bool column_major)
+{
+    return DmkSpinTransform::to_physical_nspin4(pauli, pv, column_major);
+}
+
+inline std::vector<std::vector<double>> to_physical_nspin4(
+    const std::vector<const std::vector<double>*>&,
+    const Parallel_2D&,
+    const bool)
+{
+    ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "nspin=4 DMK mixing requires complex matrix data");
+}
+
+} // namespace Exx_LRI_Interface_Detail
 
 /*
 template<typename T, typename Tdata>
@@ -163,10 +205,15 @@ void Exx_LRI_Interface<T, Tdata>::exx_beforescf(const int istep,
     // set initial parameter for mix_DMk_2D
     if(GlobalC::exx_info.info_global.cal_exx)
     {
-        if (this->exx_spacegroup_symmetry)
-            { this->mix_DMk_2D.set_nks(kv.get_nkstot_full() * (PARAM.inp.nspin == 2 ? 2 : 1)); }
-        else
-            { this->mix_DMk_2D.set_nks(kv.get_nks()); }
+        if (!this->exx_spacegroup_symmetry && PARAM.inp.nspin == 2 && kv.get_nks() % 2 != 0)
+        {
+            ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "nspin=2 DMK requires an even physical stream count");
+        }
+        // nspin=2 packs up/down into one [D0 | Dz] stream per physical k.
+        const int nk_physical = this->exx_spacegroup_symmetry
+                                    ? kv.get_nkstot_full()
+                                    : kv.get_nks() / (PARAM.inp.nspin == 2 ? 2 : 1);
+        this->mix_DMk_2D.set_nks(nk_physical);
 
         if (GlobalC::exx_info.info_global.separate_loop)
             { this->mix_DMk_2D.set_mixing_plain(GlobalC::exx_info.info_global.mixing_beta_for_loop1); }
@@ -202,15 +249,77 @@ void Exx_LRI_Interface<T, Tdata>::exx_eachiterinit(const int istep,
             const bool flag_restart = (iter == 1) ? true : false;
             auto cal = [this, &ucell,&kv, &flag_restart](const elecstate::DensityMatrix<T, double>& dm_in)
             {
+                std::vector<std::vector<T>> restored_dmk;
+                const std::vector<std::vector<T>>* physical_dmk = &dm_in.get_DMK_vector();
                 if (this->exx_spacegroup_symmetry)
-                    { this->mix_DMk_2D.mix(symrot_.restore_dm(kv, dm_in.get_DMK_vector(), *dm_in.get_paraV_pointer()), flag_restart); }
+                {
+                    // Symmetry restoration acts on physical spin streams and
+                    // must precede the Pauli transformation.
+                    restored_dmk = symrot_.restore_dm(kv, dm_in.get_DMK_vector(), *dm_in.get_paraV_pointer());
+                    physical_dmk = &restored_dmk;
+                }
+
+                std::vector<std::vector<T>> mixed_physical;
+                std::vector<const std::vector<T>*> physical_view;
+                if (PARAM.inp.nspin == 1)
+                {
+                    this->mix_DMk_2D.mix(*physical_dmk, flag_restart);
+                    physical_view = this->mix_DMk_2D.get_DMk_out();
+                }
+                else if (PARAM.inp.nspin == 2)
+                {
+                    std::vector<std::vector<T>> pauli = DmkSpinTransform::to_pauli_nspin2(*physical_dmk);
+                    const std::size_t expected_nk = static_cast<std::size_t>(
+                        this->exx_spacegroup_symmetry ? kv.get_nkstot_full() : kv.get_nks() / 2);
+                    assert (pauli.size() == expected_nk);
+                    if (GlobalC::exx_info.info_global.separate_loop)
+                    {
+                        this->mix_DMk_2D.mix(pauli, flag_restart);
+                    }
+                    else
+                    {
+                        this->mix_DMk_2D.mix(pauli, flag_restart, pauli.front().size() / 2);
+                    }
+                    mixed_physical = DmkSpinTransform::to_physical_nspin2(this->mix_DMk_2D.get_DMk_out());
+                }
+                else if (PARAM.inp.nspin == 4)
+                {
+                    const bool column_major
+                        = ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER(PARAM.inp.ks_solver);
+                    std::vector<std::vector<T>> pauli
+                        = Exx_LRI_Interface_Detail::to_pauli_nspin4(*physical_dmk,
+                                                                    *dm_in.get_paraV_pointer(),
+                                                                    column_major);
+                    assert (pauli.size() == static_cast<std::size_t>(kv.get_nks()));
+                    if (GlobalC::exx_info.info_global.separate_loop)
+                    {
+                        this->mix_DMk_2D.mix(pauli, flag_restart);
+                    }
+                    else
+                    {
+                        this->mix_DMk_2D.mix(pauli, flag_restart, pauli.front().size() / 4);
+                    }
+                    mixed_physical = Exx_LRI_Interface_Detail::to_physical_nspin4(
+                        this->mix_DMk_2D.get_DMk_out(), *dm_in.get_paraV_pointer(), column_major);
+                }
                 else
-                    { this->mix_DMk_2D.mix(dm_in.get_DMK_vector(), flag_restart); }
+                {
+                    ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "DMK mixing supports only nspin=1, 2, or 4");
+                }
+
+                if (!mixed_physical.empty())
+                {
+                    physical_view.resize(mixed_physical.size());
+                    for (std::size_t ik = 0; ik < mixed_physical.size(); ++ik)
+                    {
+                        physical_view[ik] = &mixed_physical[ik];
+                    }
+                }
                 const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Ds =
                     RI_2D_Comm::split_m2D_ktoR<Tdata>(
                         ucell,
                         *this->exx_ptr->p_kv,
-                        this->mix_DMk_2D.get_DMk_out(),
+                        physical_view,
                         *dm_in.get_paraV_pointer(),
                         PARAM.inp.nspin,
                         this->exx_spacegroup_symmetry);
@@ -394,15 +503,68 @@ bool Exx_LRI_Interface<T, Tdata>::exx_after_converge(
             // if init_wfc == "file", DM is calculated in the 1st iter of the 1st two-level step, so we mix it here
             const bool flag_restart = (this->two_level_step == 0 && PARAM.inp.init_wfc != "file") ? true : false;
 
+            std::vector<std::vector<T>> restored_dmk;
+            const std::vector<std::vector<T>>* physical_dmk = &dm.get_DMK_vector();
             if(this->exx_spacegroup_symmetry)
-                { this->mix_DMk_2D.mix(symrot_.restore_dm(kv, dm.get_DMK_vector(), *dm.get_paraV_pointer()), flag_restart); }
+            {
+                // Keep symmetry restoration in the physical spin basis.
+                restored_dmk = symrot_.restore_dm(kv, dm.get_DMK_vector(), *dm.get_paraV_pointer());
+                physical_dmk = &restored_dmk;
+            }
+
+            std::vector<std::vector<T>> mixed_physical;
+            std::vector<const std::vector<T>*> physical_view;
+            if (nspin == 1)
+            {
+                this->mix_DMk_2D.mix(*physical_dmk, flag_restart);
+                physical_view = this->mix_DMk_2D.get_DMk_out();
+            }
+            else if (nspin == 2)
+            {
+                std::vector<std::vector<T>> pauli = DmkSpinTransform::to_pauli_nspin2(*physical_dmk);
+                const std::size_t expected_nk = static_cast<std::size_t>(
+                    this->exx_spacegroup_symmetry ? kv.get_nkstot_full() : kv.get_nks() / 2);
+                if (pauli.size() != expected_nk)
+                {
+                    ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "nspin=2 Pauli stream count disagrees with k points");
+                }
+                this->mix_DMk_2D.mix(pauli, flag_restart);
+                mixed_physical = DmkSpinTransform::to_physical_nspin2(this->mix_DMk_2D.get_DMk_out());
+            }
+            else if (nspin == 4)
+            {
+                const bool column_major
+                    = ModuleBase::GlobalFunc::IS_COLUMN_MAJOR_KS_SOLVER(PARAM.inp.ks_solver);
+                std::vector<std::vector<T>> pauli
+                    = Exx_LRI_Interface_Detail::to_pauli_nspin4(*physical_dmk,
+                                                                *dm.get_paraV_pointer(),
+                                                                column_major);
+                if (pauli.size() != static_cast<std::size_t>(kv.get_nks()))
+                {
+                    ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "nspin=4 Pauli stream count disagrees with k points");
+                }
+                this->mix_DMk_2D.mix(pauli, flag_restart);
+                mixed_physical = Exx_LRI_Interface_Detail::to_physical_nspin4(
+                    this->mix_DMk_2D.get_DMk_out(), *dm.get_paraV_pointer(), column_major);
+            }
             else
-                { this->mix_DMk_2D.mix(dm.get_DMK_vector(), flag_restart); }
+            {
+                ModuleBase::WARNING_QUIT("Exx_LRI_Interface", "DMK mixing supports only nspin=1, 2, or 4");
+            }
+
+            if (!mixed_physical.empty())
+            {
+                physical_view.resize(mixed_physical.size());
+                for (std::size_t ik = 0; ik < mixed_physical.size(); ++ik)
+                {
+                    physical_view[ik] = &mixed_physical[ik];
+                }
+            }
             const std::vector<std::map<TA, std::map<TAC, RI::Tensor<Tdata>>>> Ds =
                 RI_2D_Comm::split_m2D_ktoR<Tdata>(
                     ucell,
                     *this->exx_ptr->p_kv,
-                    this->mix_DMk_2D.get_DMk_out(),
+                    physical_view,
                     *dm.get_paraV_pointer(),
                     nspin,
                     this->exx_spacegroup_symmetry);
